@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Photobooth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ IDLE ============ -->
+  <section class="screen" id="screen-idle" data-screen="idle">
+    <div class="idle-glow"></div>
+    <div class="idle-content">
+      <p class="kicker">Step right up</p>
+      <h1 class="marquee-title">PHOTO<br>BOOTH</h1>
+      <p class="idle-sub">Three shots. One strip. A GIF to remember it by.</p>
+      <button class="shutter-btn" id="btn-start" aria-label="Start photo session">
+        <span class="shutter-ring"></span>
+        <span class="shutter-label">Tap to<br>start</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ THEME SELECT ============ -->
+  <section class="screen" id="screen-theme" data-screen="theme">
+    <header class="step-header">
+      <p class="kicker">Choose a look</p>
+      <h2>Pick your frame</h2>
+    </header>
+    <div class="theme-grid" id="theme-grid"><!-- populated by JS --></div>
+    <div class="bottom-bar">
+      <button class="btn btn-ghost" id="btn-theme-back">Back</button>
+      <button class="btn btn-primary" id="btn-theme-next">Continue</button>
+    </div>
+  </section>
+
+  <!-- ============ CAPTURE ============ -->
+  <section class="screen" id="screen-capture" data-screen="capture">
+    <header class="step-header">
+      <p class="kicker" id="shot-progress">Shot 1 of 3</p>
+      <h2 id="capture-heading">Strike a pose</h2>
+    </header>
+
+    <div class="viewfinder">
+      <img id="live-feed" src="" alt="Live camera preview">
+      <div class="countdown-overlay" id="countdown-num"></div>
+      <div class="flash" id="flash-el"></div>
+    </div>
+
+    <div class="shot-rail" id="shot-rail">
+      <div class="shot-slot" data-slot="0"></div>
+      <div class="shot-slot" data-slot="1"></div>
+      <div class="shot-slot" data-slot="2"></div>
+    </div>
+
+    <div class="bottom-bar center-bar">
+      <button class="btn btn-primary btn-wide" id="btn-take-shot">Start countdown</button>
+    </div>
+  </section>
+
+  <!-- ============ FILTER / REVIEW ============ -->
+  <section class="screen" id="screen-review" data-screen="review">
+    <header class="step-header">
+      <p class="kicker">Almost there</p>
+      <h2>Pick a filter</h2>
+    </header>
+
+    <div class="review-layout">
+      <div class="strip-preview-wrap">
+        <img id="strip-preview-img" src="" alt="Your photo strip preview">
+      </div>
+      <div class="filter-list" id="filter-list"><!-- populated by JS --></div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn btn-ghost" id="btn-review-retake">Start over</button>
+      <button class="btn btn-primary" id="btn-review-confirm">Looks great</button>
+    </div>
+  </section>
+
+  <!-- ============ FINAL / QR ============ -->
+  <section class="screen" id="screen-final" data-screen="final">
+    <header class="step-header">
+      <p class="kicker">All done</p>
+      <h2>Scan to download</h2>
+    </header>
+
+    <div class="final-layout">
+      <img id="final-strip-img" class="final-strip-thumb" src="" alt="Final photo strip">
+      <div class="qr-pair">
+        <div class="qr-card">
+          <img id="qr-jpg" alt="QR code to download photo strip">
+          <p>Photo strip (JPG)</p>
+        </div>
+        <div class="qr-card">
+          <img id="qr-gif" alt="QR code to download GIF">
+          <p>Animated GIF</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar center-bar">
+      <button class="btn btn-primary btn-wide" id="btn-final-restart">Start a new session</button>
+    </div>
+  </section>
+
+  <!-- ============ LOADING VEIL ============ -->
+  <div id="loading-veil" class="hidden">
+    <div class="spinner"></div>
+    <p id="loading-text">Working on it…</p>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

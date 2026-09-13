@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Admin — PhotoBooth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+</head>
+<body class="admin-page">
+
+<div id="pin-gate" class="gate-screen">
+  <div class="gate-card">
+    <div class="gate-icon">⚙</div>
+    <p class="kicker">Staff only</p>
+    <h2>Admin Panel</h2>
+    <p class="gate-sub">Enter your PIN to manage the booth.</p>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="numpad">
+      <button type="button" onclick="pinDigit('1')">1</button>
+      <button type="button" onclick="pinDigit('2')">2</button>
+      <button type="button" onclick="pinDigit('3')">3</button>
+      <button type="button" onclick="pinDigit('4')">4</button>
+      <button type="button" onclick="pinDigit('5')">5</button>
+      <button type="button" onclick="pinDigit('6')">6</button>
+      <button type="button" onclick="pinDigit('7')">7</button>
+      <button type="button" onclick="pinDigit('8')">8</button>
+      <button type="button" onclick="pinDigit('9')">9</button>
+      <button type="button" onclick="pinClear()">⌫</button>
+      <button type="button" onclick="pinDigit('0')">0</button>
+      <button type="button" onclick="window.location='/'">✕</button>
+    </div>
+    <p id="pin-error" class="pin-error hidden">Incorrect PIN</p>
+  </div>
+</div>
+
+<div id="admin-app" class="admin-app hidden">
+  <header class="admin-header">
+    <div class="admin-logo"><span class="admin-logo-mark">⚙</span> Admin Panel</div>
+    <a href="/" class="admin-exit-btn">← Back to Booth</a>
+  </header>
+
+  <div class="admin-body">
+    <nav class="admin-sidebar" aria-label="Admin sections">
+      <button type="button" class="nav-btn active" onclick="showTab('camera')">📷 <span>Camera</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('session')">⏱ <span>Session</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('frames')">🖼 <span>Frames</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('text')">✍ <span>Text</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('output')">🎞 <span>Output</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('display')">🖥 <span>Display</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('security')">🔐 <span>Security</span></button>
+      <button type="button" class="nav-btn" onclick="showTab('network')">🌐 <span>Network</span></button>
+    </nav>
+
+    <main class="admin-content">
+
+      <section id="tab-camera" class="tab-panel active">
+        <div class="page-heading">
+          <p class="kicker">Hardware</p>
+          <h3>Camera Configuration</h3>
+          <p class="section-sub">Choose the camera used by the booth and verify the framing before guests start shooting.</p>
+        </div>
+        <div class="setting-card">
+          <label class="setting-label">Camera Source</label>
+          <p class="setting-hint">Use a local USB/OBS/V4L2 camera, or connect a phone running DroidCam directly over Wi-Fi.</p>
+          <div class="radio-group camera-source-group">
+            <label><input type="radio" name="camera-source" id="camera-source-local" value="local" checked> Local camera</label>
+            <label><input type="radio" name="camera-source" id="camera-source-droidcam" value="droidcam"> DroidCam (IP)</label>
+          </div>
+        </div>
+
+        <div class="setting-card" id="local-camera-card">
+          <label class="setting-label">Local Cameras</label>
+          <p class="setting-hint">Detected cameras on this device:</p>
+          <div id="camera-list" class="camera-list"><div class="loading-pill">Scanning…</div></div>
+          <button type="button" class="btn-secondary mt-8" onclick="scanCameras()">🔄 Rescan Cameras</button>
+        </div>
+
+        <div class="setting-card hidden" id="droidcam-card">
+          <label class="setting-label">DroidCam Connection</label>
+          <p class="setting-hint">Enter the IP address shown by DroidCam on your phone. The phone and photobooth must be on the same network.</p>
+          <div class="form-grid-2">
+            <div><label class="setting-label small">Phone IP Address</label><input class="text-input" id="droidcam-ip" placeholder="192.168.1.123" autocomplete="off"></div>
+            <div><label class="setting-label small">Port</label><input class="text-input" id="droidcam-port" type="number" min="1" max="65535" value="4747"></div>
+          </div>
+          <div class="form-grid-2 mt-8">
+            <div><label class="setting-label small">Resolution</label><select class="text-input" id="droidcam-resolution"><option value="640x480">640 × 480</option><option value="1280x720" selected>1280 × 720</option><option value="1920x1080">1920 × 1080</option></select></div>
+            <div class="camera-actions"><button type="button" class="btn-secondary" onclick="testDroidCam()">Test Connection</button><button type="button" class="btn-primary" onclick="saveDroidCam()">Use DroidCam</button></div>
+          </div>
+          <div id="droidcam-status" class="setting-hint mt-8"></div>
+        </div>
+        <div class="setting-card">
+          <div class="card-heading-row">
+            <div>
+              <label class="setting-label">Live Preview</label>
+              <p class="setting-hint">The preview uses the same near-square crop as each final photo window.</p>
+            </div>
+            <span class="aspect-badge">{{ default_slots[0][2] }} × {{ default_slots[0][3] }} photo window</span>
+          </div>
+          <div class="preview-wrap">
+            <img id="admin-live-feed" src="" alt="Live Feed">
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-session" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Timing</p><h3>Session Timing</h3><p class="section-sub">Control the countdown and the length of each animated capture.</p></div>
+        <div class="setting-card">
+          <label class="setting-label">Countdown Timer</label>
+          <p class="setting-hint">Seconds before each photo is taken.</p>
+          <div class="slider-row"><input type="range" id="s-countdown" min="2" max="15" step="1" oninput="updateSliderLabel('countdown')"><span id="lbl-countdown" class="slider-val">5s</span></div>
+        </div>
+        <div class="setting-card">
+          <label class="setting-label">GIF Capture Duration</label>
+          <p class="setting-hint">Seconds of motion recorded during each countdown. It cannot exceed the countdown.</p>
+          <div class="slider-row"><input type="range" id="s-gif-dur" min="1" max="10" step="1" oninput="updateSliderLabel('gif-dur')"><span id="lbl-gif-dur" class="slider-val">3s</span></div>
+        </div>
+        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveSessionSettings()">Save Timing</button></div>
+      </section>
+
+      <section id="tab-frames" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Design</p><h3>Frame &amp; Background</h3><p class="section-sub">Select a frame for guests or upload a transparent overlay. Frame previews preserve the full 1652 × 4920 strip instead of cropping it.</p></div>
+        <div class="frames-admin-grid" id="frames-admin-grid"></div>
+
+        <div class="setting-card mt-16">
+          <label class="setting-label">Upload Custom Frame</label>
+          <p class="setting-hint">Use a transparent PNG at <strong>{{ strip_width }} × {{ strip_height }} px</strong> for the most predictable result. Other aspect ratios are fitted without distortion.</p>
+          <div class="upload-row">
+            <input type="text" id="custom-frame-label" placeholder="Frame name" class="input-text">
+            <label class="btn-secondary upload-label">Choose File<input type="file" id="custom-frame-file" accept=".png,.jpg,.jpeg" style="display:none"></label>
+            <button type="button" class="btn-primary" onclick="uploadFrame()">Upload</button>
+          </div>
+          <p id="upload-status" class="status-msg"></p>
+        </div>
+
+        <div class="setting-card mt-16">
+          <label class="setting-label">Layout Preview</label>
+          <div id="layout-preview" class="layout-preview-box">
+            <div class="lp-strip">
+              <div class="lp-title">PHOTO BOOTH</div>
+              <div class="lp-cell">Photo 1</div><div class="lp-cell">Photo 2</div><div class="lp-cell">Photo 3</div>
+              <div class="lp-subtitle">{{ strip_width }} × {{ strip_height }}</div>
+            </div>
+          </div>
+          <p class="layout-note">Strip: {{ strip_width }} × {{ strip_height }} px &nbsp;|&nbsp; Photo cells: {{ default_slots[0][2] }} × {{ default_slots[0][3] }} px &nbsp;|&nbsp; Side margin: {{ default_slots[0][0] }} px</p>
+        </div>
+      </section>
+
+      <section id="tab-text" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Personalization</p><h3>Strip Text</h3><p class="section-sub">Optional text can be added over the final strip and GIF.</p></div>
+        <div class="setting-card"><label class="setting-label">Title</label><div class="toggle-row"><input type="text" id="t-title" class="input-text" placeholder="PHOTO BOOTH"><label class="toggle-switch"><input type="checkbox" id="t-show-title"><span class="toggle-track"></span></label></div></div>
+        <div class="setting-card"><label class="setting-label">Subtitle</label><div class="toggle-row"><input type="text" id="t-subtitle" class="input-text" placeholder="Event name or date"><label class="toggle-switch"><input type="checkbox" id="t-show-subtitle"><span class="toggle-track"></span></label></div></div>
+        <div class="setting-card mt-16"><label class="setting-label">Strip Preview</label><div class="text-preview-strip" id="text-preview-strip"><div class="tps-title" id="tps-title">PHOTO BOOTH</div><div class="tps-photo">Photo 1</div><div class="tps-photo">Photo 2</div><div class="tps-photo">Photo 3</div><div class="tps-subtitle" id="tps-subtitle"></div></div></div>
+        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveTextSettings()">Save Text</button></div>
+      </section>
+
+      <section id="tab-output" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Files</p><h3>Output Quality</h3><p class="section-sub">Balance GIF resolution and animation smoothness against file size.</p></div>
+        <div class="setting-card"><label class="setting-label">GIF Resolution</label><p class="setting-hint">Percentage of the full strip size ({{ strip_width }} × {{ strip_height }}).</p><div class="slider-row"><input type="range" id="s-gif-scale" min="15" max="80" step="5" oninput="updateSliderLabel('gif-scale')"><span id="lbl-gif-scale" class="slider-val">50%</span></div><p class="setting-hint mt-4" id="gif-dim-hint">Output: 826 × 2460 px</p></div>
+        <div class="setting-card"><label class="setting-label">GIF Frame Rate</label><p class="setting-hint">Frames per second of the output GIF.</p><div class="slider-row"><input type="range" id="s-gif-fps" min="6" max="24" step="2" oninput="updateSliderLabel('gif-fps')"><span id="lbl-gif-fps" class="slider-val">8 fps</span></div></div>
+        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveOutputSettings()">Save Output Settings</button></div>
+      </section>
+
+      <section id="tab-display" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Kiosk</p><h3>Display / Live Feed</h3><p class="section-sub">The live preview always uses the same photo crop as the final output. Choose how large that correctly-framed preview appears.</p></div>
+        <div class="setting-card"><label class="setting-label">Live Camera Feed Mode</label><div class="radio-group">
+          <label class="radio-opt"><input type="radio" name="feed-mode" value="fit" id="rm-fit"><div class="radio-card"><div class="radio-icon">▣</div><div><strong>Fit (Sidebar)</strong><p>Keep the full photo-window crop visible beside the controls.</p></div></div></label>
+          <label class="radio-opt"><input type="radio" name="feed-mode" value="fill" id="rm-fill"><div class="radio-card"><div class="radio-icon">⬛</div><div><strong>Fill (Fullscreen)</strong><p>Use the same crop, but allow the preview to occupy more of the screen.</p></div></div></label>
+        </div></div>
+        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveDisplaySettings()">Save Display</button></div>
+      </section>
+
+      <section id="tab-security" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Access</p><h3>Security</h3><p class="section-sub">Change the PIN used to enter this admin panel.</p></div>
+        <div class="setting-card"><label class="setting-label">Change Admin PIN</label><div class="pin-change-form"><input type="password" id="sec-current" maxlength="8" inputmode="numeric" class="input-text" placeholder="Current PIN"><input type="password" id="sec-new" maxlength="8" inputmode="numeric" class="input-text" placeholder="New PIN (4+ digits)"><input type="password" id="sec-confirm" maxlength="8" inputmode="numeric" class="input-text" placeholder="Confirm New PIN"><button type="button" class="btn-primary" onclick="changePin()">Change PIN</button></div><p id="pin-change-status" class="status-msg mt-8"></p></div>
+      </section>
+
+      <section id="tab-network" class="tab-panel">
+        <div class="page-heading"><p class="kicker">Connectivity</p><h3>Network / QR Settings</h3><p class="section-sub">QR codes on the result screen use this address. Set the Raspberry Pi LAN address if automatic detection picks the wrong interface.</p></div>
+        <div class="setting-card"><div id="net-info" class="net-info-block">Loading…</div><div class="net-form"><input type="text" id="n-ip" class="input-text" placeholder="192.168.1.x"><input type="number" id="n-port" class="input-text port-input" placeholder="5000" min="1024" max="65535"><button type="button" class="btn-primary" onclick="saveNetworkSettings()">Save</button></div><p class="setting-hint mt-8">Network changes take effect after restarting the app.</p></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</body>
+</html>

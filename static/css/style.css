@@ -1,0 +1,506 @@
+/* ==========================================================================
+   Tokens
+   ========================================================================== */
+:root {
+  --bg: #07111f;
+  --panel: #0c1a2b;
+  --panel-raised: #10243a;
+  --line: #1d3852;
+  --ink: #edf6ff;
+  --ink-dim: #91a7b8;
+  --accent: #2b8bd6;
+  --accent-dim: #174d78;
+  --rose: #e2637a;
+  --success: #8fbf8a;
+
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-body: "Sora", "Segoe UI", sans-serif;
+
+  --radius-sm: 4px;
+  --radius-lg: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+img { -webkit-user-drag: none; }
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ==========================================================================
+   Screens
+   ========================================================================== */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 48px 56px 40px;
+  opacity: 0;
+}
+
+.screen.active {
+  display: flex;
+  opacity: 1;
+  animation: screen-in 380ms ease both;
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: scale(0.99); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen.active { animation: none; }
+}
+
+.kicker {
+  font-size: 15px;
+  color: var(--ink-dim);
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+
+.step-header h2 {
+  font-family: var(--font-display);
+  font-size: 44px;
+  letter-spacing: 0.01em;
+  margin: 0;
+  font-weight: 400;
+}
+
+.step-header { margin-bottom: 28px; }
+
+/* ==========================================================================
+   Idle screen
+   ========================================================================== */
+#screen-idle {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+.idle-glow {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: 900px;
+  height: 900px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(43,139,214,0.16) 0%, rgba(43,139,214,0) 65%);
+  pointer-events: none;
+}
+
+.idle-content { position: relative; z-index: 1; }
+
+.marquee-title {
+  font-family: var(--font-display);
+  font-size: 132px;
+  line-height: 0.92;
+  color: var(--ink);
+  margin: 10px 0 18px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 60px rgba(43,139,214,0.25);
+}
+
+.idle-sub {
+  font-size: 19px;
+  color: var(--ink-dim);
+  max-width: 440px;
+  margin: 0 auto 52px;
+}
+
+.shutter-btn {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 35% 30%, #e8f5ff 0%, var(--accent) 55%, #145a92 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 10px rgba(43,139,214,0.08), 0 20px 50px rgba(0,0,0,0.45);
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+.shutter-ring {
+  position: absolute;
+  inset: 14px;
+  border-radius: 50%;
+  border: 3px solid rgba(18,16,20,0.25);
+}
+
+.shutter-label {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: #061522;
+  line-height: 1.05;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 10px rgba(43,139,214,0.08), 0 20px 50px rgba(0,0,0,0.45); }
+  50%      { box-shadow: 0 0 0 22px rgba(43,139,214,0.05), 0 20px 60px rgba(0,0,0,0.5); }
+}
+
+/* ==========================================================================
+   Buttons (shared)
+   ========================================================================== */
+.btn {
+  font-size: 18px;
+  padding: 18px 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #061522;
+  border-color: var(--accent);
+}
+
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  color: var(--ink-dim);
+}
+
+.btn-wide { flex: 1; }
+
+.bottom-bar {
+  margin-top: auto;
+  display: flex;
+  gap: 18px;
+  padding-top: 24px;
+}
+
+.center-bar { justify-content: center; }
+
+/* ==========================================================================
+   Theme select
+   ========================================================================== */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 20px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.theme-card {
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  padding: 14px;
+  text-align: left;
+}
+
+.theme-card.selected {
+  border-color: var(--accent);
+  background: var(--panel-raised);
+}
+
+.theme-thumb {
+  width: 100%;
+  aspect-ratio: 1652 / 4476;
+  height: auto;
+  object-fit: contain;
+  border-radius: 2px;
+  background: #0e1620;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.theme-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Capture screen
+   ========================================================================== */
+#screen-capture { align-items: center; }
+
+.viewfinder {
+  position: relative;
+  height: min(58vh, 62vw);
+  width: auto;
+  max-width: 92%;
+  aspect-ratio: 1 / 1;
+  border: 3px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #000;
+  flex: 0 1 auto;
+  max-height: 62vh;
+}
+
+#live-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transform: scaleX(-1); /* mirror for natural selfie framing */
+}
+
+.countdown-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 180px;
+  color: var(--accent);
+  text-shadow: 0 0 40px rgba(0,0,0,0.6);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.countdown-overlay.show { opacity: 1; }
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flash.fire {
+  animation: flash-fire 260ms ease-out;
+}
+
+@keyframes flash-fire {
+  0%   { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+.shot-rail {
+  display: flex;
+  gap: 14px;
+  margin: 22px 0 6px;
+}
+
+.shot-slot {
+  width: 84px;
+  height: 84px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  background-size: cover;
+  background-position: center;
+}
+
+.shot-slot.filled { border-color: var(--success); }
+
+/* ==========================================================================
+   Review / filter screen
+   ========================================================================== */
+.review-layout {
+  display: flex;
+  gap: 36px;
+  flex: 1;
+  min-height: 0;
+}
+
+.strip-preview-wrap {
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#strip-preview-img {
+  max-height: 100%;
+  max-width: 320px;
+  border-radius: 2px;
+  border: 2px solid var(--line);
+}
+
+.filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 6px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  padding: 10px 16px 10px 10px;
+}
+
+.filter-row.selected {
+  border-color: var(--rose);
+  background: var(--panel-raised);
+}
+
+.filter-row img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.filter-row span {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Final / QR screen
+   ========================================================================== */
+.final-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 56px;
+  flex: 1;
+  min-height: 0;
+}
+
+.final-strip-thumb {
+  max-height: 100%;
+  border-radius: 2px;
+  border: 2px solid var(--line);
+}
+
+.qr-pair {
+  display: flex;
+  gap: 32px;
+}
+
+.qr-card {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  text-align: center;
+}
+
+.qr-card img {
+  width: 220px;
+  height: 220px;
+  background: #fff;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.qr-card p {
+  margin: 14px 0 0;
+  font-size: 16px;
+  color: var(--ink-dim);
+}
+
+/* ==========================================================================
+   Loading veil
+   ========================================================================== */
+#loading-veil {
+  position: fixed;
+  inset: 0;
+  background: rgba(12,10,13,0.88);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  z-index: 50;
+}
+
+#loading-veil.hidden { display: none; }
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 5px solid var(--line);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+#loading-text {
+  font-size: 17px;
+  color: var(--ink-dim);
+}
+
+/* ==========================================================================
+   Small screens (fallback, kiosk is normally fixed-size touchscreen)
+   ========================================================================== */
+@media (max-width: 700px) {
+  .marquee-title { font-size: 88px; }
+  .review-layout { flex-direction: column; }
+  .strip-preview-wrap { max-height: 220px; }
+  .final-layout { flex-direction: column; gap: 24px; }
+}
+
+/* Raspberry Pi touchscreen / compact kiosk displays */
+@media (max-width: 700px) {
+  .screen { padding: 20px 18px 14px; }
+  .kicker { font-size: 11px; }
+  .step-header { margin-bottom: 10px; }
+  .step-header h2 { font-size: 34px; }
+  .marquee-title { font-size: 68px; margin: 5px 0 10px; }
+  .idle-sub { font-size: 13px; margin-bottom: 24px; }
+  .shutter-btn { width: 126px; height: 126px; }
+  .shutter-ring { inset: 9px; border-width: 2px; }
+  .shutter-label { font-size: 17px; }
+  .viewfinder { height: min(52vh, 60vw); max-height: 166px; border-width: 2px; }
+  .shot-rail { gap: 8px; margin: 8px 0 4px; }
+  .shot-slot { width: 48px; height: 48px; }
+  .bottom-bar { gap: 8px; padding-top: 8px; }
+  .btn { font-size: 14px; padding: 11px 16px; }
+  .countdown-overlay { font-size: 100px; }
+  .theme-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .theme-card { padding: 7px; }
+  .theme-name { font-size: 11px; }
+  .review-layout { gap: 12px; }
+  .strip-preview-wrap { max-height: 165px; }
+  #strip-preview-img { max-width: 110px; }
+  .filter-list { gap: 6px; }
+  .filter-row { padding: 6px 8px 6px 6px; gap: 8px; }
+  .filter-row img { width: 42px; height: 42px; }
+  .filter-row span { font-size: 12px; }
+  .final-layout { gap: 12px; }
+  .final-strip-thumb { max-height: 170px; }
+  .qr-pair { gap: 8px; }
+  .qr-card { padding: 8px; }
+  .qr-card img { width: 88px; height: 88px; padding: 5px; }
+  .qr-card p { margin-top: 6px; font-size: 10px; }
+}
+.theme-thumb img { width:100%; height:100%; object-fit:contain; display:block; }

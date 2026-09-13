@@ -1,0 +1,25 @@
+{
+  "name": "Gold Foil",
+  "overlay": "gold_foil.png",
+  "thumbnail": "gold_foil_thumb.jpg",
+  "slots": [
+    [
+      150,
+      80,
+      1352,
+      1352
+    ],
+    [
+      150,
+      1482,
+      1352,
+      1352
+    ],
+    [
+      150,
+      2884,
+      1352,
+      1352
+    ]
+  ]
+}
