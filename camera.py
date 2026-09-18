@@ -1,5 +1,6 @@
 """Camera manager supporting local V4L2/OBS cameras and DroidCam IP streams."""
 import glob
+import os
 import threading
 import time
 import urllib.parse
@@ -7,6 +8,19 @@ import urllib.parse
 import cv2
 
 import config
+
+
+def _capture_backend():
+    """Return the OpenCV capture backend appropriate for this operating system."""
+    if os.name == "nt":
+        return cv2.CAP_DSHOW
+    if hasattr(cv2, "CAP_V4L2"):
+        return cv2.CAP_V4L2
+    return cv2.CAP_ANY
+
+
+def _open_capture(source):
+    return cv2.VideoCapture(source, _capture_backend())
 
 
 def list_candidate_devices():
@@ -21,7 +35,7 @@ def list_candidate_devices():
 
 
 def probe_camera(index, timeout_frames=5):
-    cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
+    cap = _open_capture(index)
     if not cap.isOpened():
         cap.release()
         return False
@@ -106,7 +120,7 @@ class CameraManager:
 
     def _open_local(self, chosen):
         self.stop()
-        cap = cv2.VideoCapture(int(chosen), cv2.CAP_V4L2)
+        cap = _open_capture(int(chosen))
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_REQUEST_WIDTH)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_REQUEST_HEIGHT)
         try:
