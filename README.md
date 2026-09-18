@@ -11,17 +11,17 @@ animated H.264 MP4 straight to their phone.
 - **3×1 photo strip**, rendered at **1652 × 4576 px**, with selectable
   frame/background overlays.
 - **Synced MP4**: while each of the 3 countdowns plays, a short clip
-  (5s by default, adjustable) is recorded. The three clips are combined
+  (3s by default, adjustable) is recorded during the 5s countdown. The three clips are combined
   into **one H.264 MP4 laid out like the strip**, with all three panels
   animating **simultaneously**.
-- **5 filters**: Original, Warm, Cool, Soft Light, Polaroid, Monochrome
+- **6 filters**: Original, Warm, Cool, Soft Light, Polaroid, Monochrome
   — applied after capture, previewed live before confirming.
-- **QR code delivery**: two QR codes (photo, GIF) pointing at
+- **QR code delivery**: two QR codes (photo, MP4) pointing at
   locally-served download links — same pattern as commercial booths.
-- **Auto camera detection**: scans `/dev/video*` for any working
-  camera, including USB webcams and phones running USB camera-forwarding
-  apps like DroidCam (they show up as a normal V4L2 device once their
-  Pi-side client/driver is running — no special-casing needed).
+- **Auto camera detection**: scans available camera indices using the
+  platform-appropriate OpenCV backend. Linux uses `/dev/video*`/V4L2;
+  Windows uses DirectShow indices. This supports USB webcams and phones
+  running camera-forwarding apps such as DroidCam.
 - Files saved to `saves/images/*.jpg` and `saves/video/*.mp4` in the
   working directory.
 
@@ -49,25 +49,15 @@ index it landed on if you ever need to force it in `config.py`
 
 ## 2. Add frame themes
 
-Two example themes are already generated and committed under
-`static/frames/themes/` (Gold Foil, Pastel Dots). Two ways to add more:
-
-**A. Upload through the admin page (recommended)** — open
+Upload themes through the admin page — open
 `http://<pi-ip>:5000/admin` from your own phone/laptop on the same
 network (this page is intentionally *not* linked from the kiosk UI, so
 guests can't reach it). Upload a transparent PNG, give it a name, and it
 shows up in the kiosk's "Pick your frame" screen immediately. Design your
 PNG at exactly 1652 × 4576px for a pixel-perfect fit; anything else gets
 auto-scaled and centered. The admin page shows the default photo-window
-coordinates so you know where to leave your artwork transparent, or you
-can paste custom `[x, y, w, h]` slot coordinates per photo under
-"Advanced" if your design doesn't follow the default grid. Existing
-frames (other than the built-in Classic) can be deleted from the same
-page.
-
-**B. Script it** — `python3 make_demo_themes.py` regenerates the two
-bundled examples and doubles as a template if you'd rather generate
-frames programmatically.
+coordinates so you know where to leave your artwork transparent. Existing
+frames (other than the built-in Classic) can be deleted from the same page.
 
 ## 3. Run
 
@@ -91,7 +81,7 @@ All tunables live in `config.py`:
 
 | Setting | What it does |
 |---|---|
-| `CAMERA_INDEX` | Force a specific `/dev/videoN`; `None` = auto-detect |
+| `CAMERA_INDEX` | Force a camera index; `None` = auto-detect |
 | `STRIP_WIDTH` / `STRIP_HEIGHT` | Final strip resolution (default 1652×4576) |
 | `SHOT_DURATION_SECONDS` | Countdown length **and** per-shot video clip length |
 | `GIF_CAPTURE_FPS` | Frames/sec captured for the MP4 during each countdown |
@@ -113,7 +103,6 @@ camera.py           Camera auto-detection + threaded frame grabbing
 compositor.py        Filters, frame-theme loading, strip compositing
 video_builder.py     Builds the synced 3-panel H.264 MP4
 config.py            All tunable settings
-make_demo_themes.py  Generates/documents example frame overlays
 templates/index.html Kiosk single-page shell
 templates/admin.html  Staff-only frame upload/manage page (/admin)
 static/css/style.css Kiosk UI styling
@@ -141,21 +130,30 @@ The current build uses a **dark-blue UI** throughout the guest kiosk and the adm
 The default strip geometry is now:
 
 - Strip: **1652 × 4576 px**
-- Each photo window: **1452 × 1452 px**
-- Side margin: **100 px**
-- Top margin: **60 px**
+- Each photo window: **1352 × 1352 px**
+- Side margin: **150 px**
+- Top margin: **120 px**
 - Gap: **50 px**
-- Bottom/footer area: about **402 px**
+- Bottom/footer area: **300 px**
 
-This gives each photo an exact **1:1 aspect ratio**. The live camera feed is center-cropped to 16:9 on the server, and captured stills/GIF frames use the same crop before compositing. The kiosk preview therefore shows the same framing that enters the final photo window rather than using a 16:9 `object-fit: cover` preview that later crops differently.
+This gives each photo an exact **1:1 aspect ratio**. The live camera feed,
+captured stills, and MP4 frames are center-cropped to the configured 1:1
+photo aspect ratio before compositing. The kiosk preview therefore shows the
+same framing that enters the final photo window.
 
 Frame thumbnails use `contain` instead of `cover`, so the entire tall photo-strip frame is visible in the frame picker and admin page.
 
-The `/admin` page now follows the supplied dashboard layout with sections for Camera, Session, Frames, Text, Output, Display, Security, and Network. The controls are wired to the Flask backend and persist to `settings.json`.
+The `/admin` page now follows the supplied dashboard layout with sections for
+Camera, Session, Frames, Output, Display, Security, and Network. The controls
+are wired to the Flask backend and persist to `settings.json`.
 
 ### Admin PIN
 
 The default admin PIN for a fresh installation is **1234**. Change it from **Admin → Security**. You can also set `PHOTOBOOTH_ADMIN_PIN` before the first run. The changed PIN is stored as a SHA-256 hash in `settings.json` rather than as plain text.
 
 ### Camera selection and rescan
-Camera discovery is non-blocking: `start.sh`/`app.py` starts Flask while V4L2 devices are scanned in a background thread. The Admin > Camera panel can rescan and select any detected working `/dev/video*` device without requiring a code change. This prevents inactive V4L2 nodes from blocking the localhost web interface during startup.
+Camera discovery is non-blocking: `start.sh`/`app.py` starts Flask while
+available camera indices are scanned in a background thread. The Admin >
+Camera panel can rescan and select any detected working camera without
+requiring a code change. This prevents inactive camera devices from blocking
+the localhost web interface during startup.
