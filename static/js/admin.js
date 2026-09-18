@@ -103,7 +103,6 @@
     $("s-gif-dur").value = Math.min(settings.gif_duration, settings.countdown);
     $("s-gif-scale").value = settings.gif_scale;
     $("s-gif-fps").value = settings.gif_fps;
-    $(`rm-${settings.feed_mode || "fit"}`).checked = true;
     $("n-ip").value = settings.force_host_ip || "";
     $("n-port").value = settings.server_port || 5000;
     $("droidcam-ip").value = settings.droidcam_ip || "";
@@ -169,13 +168,6 @@
   window.saveOutputSettings = async function () {
     try {
       await saveSettings({ gif_scale: Number($("s-gif-scale").value), gif_fps: Number($("s-gif-fps").value) });
-    } catch (err) { toast(err.message, true); }
-  };
-
-  window.saveDisplaySettings = async function () {
-    try {
-      const selected = document.querySelector('input[name="feed-mode"]:checked');
-      await saveSettings({ feed_mode: selected ? selected.value : "fit" });
     } catch (err) { toast(err.message, true); }
   };
 

@@ -34,7 +34,6 @@ DEFAULT_ADMIN_SETTINGS = {
     "gif_duration": min(3, int(config.SHOT_DURATION_SECONDS)),
     "gif_scale": 50,
     "gif_fps": config.GIF_CAPTURE_FPS,
-    "feed_mode": "fit",
     "force_host_ip": config.FORCE_HOST_IP or "",
     "server_port": config.SERVER_PORT,
     "camera_source": "local",
@@ -522,10 +521,6 @@ def api_admin_settings_save():
         if "gif_duration" in data: integer("gif_duration", 1, 10)
         if "gif_scale" in data: integer("gif_scale", 15, 80)
         if "gif_fps" in data: integer("gif_fps", 6, 24)
-        if "feed_mode" in data:
-            if data["feed_mode"] not in ("fit", "fill"):
-                raise ValueError("feed_mode must be fit or fill")
-            updated["feed_mode"] = data["feed_mode"]
         if "force_host_ip" in data: updated["force_host_ip"] = str(data["force_host_ip"]).strip()
         if "server_port" in data: integer("server_port", 1024, 65535)
         if "camera_source" in data:

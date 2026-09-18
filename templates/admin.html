@@ -51,7 +51,6 @@
       <button type="button" class="nav-btn" onclick="showTab('session')">⏱ <span>Session</span></button>
       <button type="button" class="nav-btn" onclick="showTab('frames')">🖼 <span>Frames</span></button>
       <button type="button" class="nav-btn" onclick="showTab('output')">🎞 <span>Output</span></button>
-      <button type="button" class="nav-btn" onclick="showTab('display')">🖥 <span>Display</span></button>
       <button type="button" class="nav-btn" onclick="showTab('security')">🔐 <span>Security</span></button>
       <button type="button" class="nav-btn" onclick="showTab('network')">🌐 <span>Network</span></button>
     </nav>
@@ -155,15 +154,6 @@
         <div class="setting-card"><label class="setting-label">Video Resolution</label><p class="setting-hint">Percentage of the full strip size ({{ strip_width }} × {{ strip_height }}). H.264 output uses even pixel dimensions.</p><div class="slider-row"><input type="range" id="s-gif-scale" min="15" max="80" step="5" oninput="updateSliderLabel('gif-scale')"><span id="lbl-gif-scale" class="slider-val">50%</span></div><p class="setting-hint mt-4" id="gif-dim-hint">Output: 826 × 2262 px</p></div>
         <div class="setting-card"><label class="setting-label">Video Frame Rate</label><p class="setting-hint">Frames per second of the output MP4.</p><div class="slider-row"><input type="range" id="s-gif-fps" min="6" max="24" step="2" oninput="updateSliderLabel('gif-fps')"><span id="lbl-gif-fps" class="slider-val">8 fps</span></div></div>
         <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveOutputSettings()">Save Output Settings</button></div>
-      </section>
-
-      <section id="tab-display" class="tab-panel">
-        <div class="page-heading"><p class="kicker">Kiosk</p><h3>Display / Live Feed</h3><p class="section-sub">The live preview always uses the same photo crop as the final output. Choose how large that correctly-framed preview appears.</p></div>
-        <div class="setting-card"><label class="setting-label">Live Camera Feed Mode</label><div class="radio-group">
-          <label class="radio-opt"><input type="radio" name="feed-mode" value="fit" id="rm-fit"><div class="radio-card"><div class="radio-icon">▣</div><div><strong>Fit (Sidebar)</strong><p>Keep the full photo-window crop visible beside the controls.</p></div></div></label>
-          <label class="radio-opt"><input type="radio" name="feed-mode" value="fill" id="rm-fill"><div class="radio-card"><div class="radio-icon">⬛</div><div><strong>Fill (Fullscreen)</strong><p>Use the same crop, but allow the preview to occupy more of the screen.</p></div></div></label>
-        </div></div>
-        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveDisplaySettings()">Save Display</button></div>
       </section>
 
       <section id="tab-security" class="tab-panel">

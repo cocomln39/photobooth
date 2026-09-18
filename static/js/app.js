@@ -127,7 +127,32 @@
     els.btnTakeShot.disabled = false;
     els.btnTakeShot.textContent = "Start countdown";
     showScreen("capture");
+    requestAnimationFrame(syncCaptureLayout);
   }
+
+  function syncCaptureLayout() {
+    const viewfinder = document.querySelector("#screen-capture .viewfinder");
+    const rail = els.shotRail;
+    if (!viewfinder || !rail) return;
+
+    const size = Math.round(viewfinder.getBoundingClientRect().width);
+    if (!size) return;
+    const styles = getComputedStyle(rail);
+    const gap = parseFloat(styles.rowGap || styles.gap) || 0;
+    const slotSize = Math.max(1, Math.floor((size - gap * 2) / 3));
+    rail.style.width = `${slotSize}px`;
+    rail.style.height = `${size}px`;
+    rail.querySelectorAll(".shot-slot").forEach((slot) => {
+      slot.style.width = `${slotSize}px`;
+      slot.style.height = `${slotSize}px`;
+    });
+  }
+
+  if (window.ResizeObserver) {
+    const captureViewfinder = document.querySelector("#screen-capture .viewfinder");
+    if (captureViewfinder) new ResizeObserver(syncCaptureLayout).observe(captureViewfinder);
+  }
+  window.addEventListener("resize", syncCaptureLayout);
 
   function updateCaptureHeading() {
     els.shotProgress.textContent = `Shot ${state.currentShot + 1} of ${state.shotsPerStrip}`;

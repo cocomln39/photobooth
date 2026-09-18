@@ -189,7 +189,7 @@ img { -webkit-user-drag: none; }
   color: var(--ink-dim);
 }
 
-.btn-wide { flex: 1; }
+.btn-wide { flex: 0.25; }
 
 .bottom-bar {
   margin-top: auto;
@@ -197,6 +197,8 @@ img { -webkit-user-drag: none; }
   gap: 18px;
   padding-top: 24px;
 }
+
+.bottom-bar:not(.center-bar) { justify-content: flex-end; }
 
 .center-bar { justify-content: center; }
 
@@ -244,26 +246,48 @@ img { -webkit-user-drag: none; }
 /* ==========================================================================
    Capture screen
    ========================================================================== */
-#screen-capture { align-items: center; }
+#screen-capture.active {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 24px;
+}
+
+#screen-capture .step-header { grid-column: 1 / -1; }
+#screen-capture .viewfinder { grid-column: 2; grid-row: 2; }
+#screen-capture .shot-rail {
+  grid-column: 3;
+  grid-row: 2;
+  flex-direction: column;
+  margin: 0;
+  height: 100%;
+  width: 120px;
+  align-items: center;
+  min-height: 0;
+}
+#screen-capture .bottom-bar {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
 
 .viewfinder {
   position: relative;
+  width: min(58vh, 62vw);
   height: min(58vh, 62vw);
-  width: auto;
   max-width: 92%;
-  aspect-ratio: 1 / 1;
+  max-height: 62vh;
   border: 3px solid var(--line);
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: #000;
-  flex: 0 1 auto;
-  max-height: 62vh;
+  flex: 0 0 auto;
 }
 
 #live-feed {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
   transform: scaleX(-1); /* mirror for natural selfie framing */
 }
@@ -308,8 +332,9 @@ img { -webkit-user-drag: none; }
 }
 
 .shot-slot {
-  width: 84px;
-  height: 84px;
+  width: 120px;
+  height: 120px;
+  flex: 0 0 auto;
   border: 2px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--panel);
@@ -409,21 +434,23 @@ img { -webkit-user-drag: none; }
   background: var(--panel);
   border: 2px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 22px;
+  width: 120px;
+  padding: 8px;
   text-align: center;
 }
 
 .qr-card img {
-  width: 220px;
-  height: 220px;
+  width: 100px;
+  height: 100px;
   background: #fff;
   border-radius: 4px;
-  padding: 10px;
+  padding: 0;
 }
 
 .qr-card p {
-  margin: 14px 0 0;
-  font-size: 16px;
+  margin: 8px -2px 0;
+  line-height: 1.2;
+  font-size: 11px;
   color: var(--ink-dim);
 }
 
@@ -481,9 +508,19 @@ img { -webkit-user-drag: none; }
   .shutter-btn { width: 126px; height: 126px; }
   .shutter-ring { inset: 9px; border-width: 2px; }
   .shutter-label { font-size: 17px; }
-  .viewfinder { height: min(52vh, 60vw); max-height: 166px; border-width: 2px; }
-  .shot-rail { gap: 8px; margin: 8px 0 4px; }
-  .shot-slot { width: 48px; height: 48px; }
+  #screen-capture.active {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    column-gap: 10px;
+    row-gap: 8px;
+  }
+  #screen-capture .step-header { grid-column: 1 / -1; }
+  #screen-capture .viewfinder { grid-column: 1; grid-row: 2; justify-self: end; }
+  #screen-capture .shot-rail { grid-column: 2; grid-row: 2; flex-direction: column; height: auto; width: 80px; margin: 0; }
+  #screen-capture .bottom-bar { grid-column: 1 / -1; grid-row: 3; }
+  .viewfinder { width: min(52vh, calc(100vw - 150px)); height: min(52vh, calc(100vw - 150px)); max-width: none; max-height: none; border-width: 2px; }
+  .shot-rail { gap: 8px; }
+  .shot-slot { width: 80px; height: 80px; flex: 0 0 auto; }
   .bottom-bar { gap: 8px; padding-top: 8px; }
   .btn { font-size: 14px; padding: 11px 16px; }
   .countdown-overlay { font-size: 100px; }
@@ -500,8 +537,8 @@ img { -webkit-user-drag: none; }
   .final-layout { gap: 12px; }
   .final-strip-thumb { max-height: 170px; }
   .qr-pair { gap: 8px; }
-  .qr-card { padding: 8px; }
-  .qr-card img { width: 88px; height: 88px; padding: 5px; }
+  .qr-card { width: 116px; padding: 6px; }
+  .qr-card img { width: 100px; height: 100px; padding: 0; }
   .qr-card p { margin-top: 6px; font-size: 10px; }
 }
 .theme-thumb img { width:100%; height:100%; object-fit:contain; display:block; }
