@@ -100,6 +100,9 @@
       els.themeGrid.appendChild(card);
     });
     state.themeId = themes[0] ? themes[0].id : "classic";
+    requestAnimationFrame(() => {
+      els.themeGrid.scrollTop = els.themeGrid.scrollHeight;
+    });
   }
 
   els.btnThemeBack.addEventListener("click", () => showScreen("idle"));
