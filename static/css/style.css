@@ -139,7 +139,6 @@ img { -webkit-user-drag: none; }
   border: none;
   background: radial-gradient(circle at 35% 30%, #e8f5ff 0%, var(--accent) 55%, #145a92 100%);
   position: relative;
-  display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 0 10px rgba(43,139,214,0.08), 0 20px 50px rgba(0,0,0,0.45);
@@ -239,6 +238,7 @@ img { -webkit-user-drag: none; }
 .theme-name {
   font-size: 16px;
   font-weight: 600;
+  color: #fff;
 }
 
 /* ==========================================================================
