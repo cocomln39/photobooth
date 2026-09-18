@@ -1,0 +1,13 @@
+{
+  "countdown": 5,
+  "gif_duration": 3,
+  "gif_scale": 80,
+  "gif_fps": 24,
+  "feed_mode": "fit",
+  "force_host_ip": "",
+  "server_port": 5000,
+  "camera_source": "droidcam",
+  "droidcam_ip": "192.168.100.114",
+  "droidcam_port": 4747,
+  "droidcam_resolution": "1920x1080"
+}

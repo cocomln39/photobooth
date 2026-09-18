@@ -2,17 +2,17 @@
 
 A kiosk-style photobooth web app: Flask backend + vanilla JS frontend.
 Guests tap to start, pick a frame, pose for 3 timed shots (each one also
-recording a short GIF clip during its countdown), pick a filter, then
+recording a short video clip during its countdown), pick a filter, then
 scan two QR codes to download the finished photo strip (JPG) and the
-animated GIF straight to their phone.
+animated H.264 MP4 straight to their phone.
 
 ## Features
 
-- **3×1 photo strip**, rendered at **1652 × 4920 px**, with selectable
+- **3×1 photo strip**, rendered at **1652 × 4576 px**, with selectable
   frame/background overlays.
-- **Synced GIF**: while each of the 3 countdowns plays, a short clip
+- **Synced MP4**: while each of the 3 countdowns plays, a short clip
   (5s by default, adjustable) is recorded. The three clips are combined
-  into **one GIF laid out like the strip**, with all three panels
+  into **one H.264 MP4 laid out like the strip**, with all three panels
   animating **simultaneously**.
 - **5 filters**: Original, Warm, Cool, Soft Light, Polaroid, Monochrome
   — applied after capture, previewed live before confirming.
@@ -22,7 +22,7 @@ animated GIF straight to their phone.
   camera, including USB webcams and phones running USB camera-forwarding
   apps like DroidCam (they show up as a normal V4L2 device once their
   Pi-side client/driver is running — no special-casing needed).
-- Files saved to `saves/images/*.jpg` and `saves/gif/*.gif` in the
+- Files saved to `saves/images/*.jpg` and `saves/video/*.mp4` in the
   working directory.
 
 ## 1. Install (Raspberry Pi OS / Debian-based)
@@ -57,7 +57,7 @@ Two example themes are already generated and committed under
 network (this page is intentionally *not* linked from the kiosk UI, so
 guests can't reach it). Upload a transparent PNG, give it a name, and it
 shows up in the kiosk's "Pick your frame" screen immediately. Design your
-PNG at exactly 1652 × 4920px for a pixel-perfect fit; anything else gets
+PNG at exactly 1652 × 4576px for a pixel-perfect fit; anything else gets
 auto-scaled and centered. The admin page shows the default photo-window
 coordinates so you know where to leave your artwork transparent, or you
 can paste custom `[x, y, w, h]` slot coordinates per photo under
@@ -92,10 +92,10 @@ All tunables live in `config.py`:
 | Setting | What it does |
 |---|---|
 | `CAMERA_INDEX` | Force a specific `/dev/videoN`; `None` = auto-detect |
-| `STRIP_WIDTH` / `STRIP_HEIGHT` | Final strip resolution (default 1652×2990) |
-| `SHOT_DURATION_SECONDS` | Countdown length **and** per-shot GIF clip length |
-| `GIF_CAPTURE_FPS` | Frames/sec captured for the GIF during each countdown |
-| `GIF_PANEL_MAX_WIDTH` | Downscale width per GIF panel (keeps file size sane) |
+| `STRIP_WIDTH` / `STRIP_HEIGHT` | Final strip resolution (default 1652×4576) |
+| `SHOT_DURATION_SECONDS` | Countdown length **and** per-shot video clip length |
+| `GIF_CAPTURE_FPS` | Frames/sec captured for the MP4 during each countdown |
+| `GIF_PANEL_MAX_WIDTH` | Downscale width per video panel (keeps file size sane) |
 | `FILTERS` | The 5(+) filters offered after capture |
 | `SERVER_PORT` | Port used for the app **and** embedded in QR download links |
 | `FORCE_HOST_IP` | Override the LAN IP embedded in QR codes if auto-detect picks the wrong NIC |
@@ -111,7 +111,7 @@ and reach the download links.
 app.py              Flask routes + session state machine
 camera.py           Camera auto-detection + threaded frame grabbing
 compositor.py        Filters, frame-theme loading, strip compositing
-gif_builder.py       Builds the synced 3-panel animated GIF
+video_builder.py     Builds the synced 3-panel H.264 MP4
 config.py            All tunable settings
 make_demo_themes.py  Generates/documents example frame overlays
 templates/index.html Kiosk single-page shell
@@ -122,7 +122,7 @@ static/js/app.js     Kiosk UI flow/logic
 static/js/admin.js   Admin page upload/delete logic
 static/frames/themes/  Frame overlay PNGs + JSON metadata
 saves/images/         Finished JPG strips land here
-saves/gif/             Finished GIFs land here
+saves/video/           Finished MP4 videos land here
 ```
 
 ## Notes / known limitations
@@ -140,7 +140,7 @@ The current build uses a **dark-blue UI** throughout the guest kiosk and the adm
 
 The default strip geometry is now:
 
-- Strip: **1652 × 4920 px**
+- Strip: **1652 × 4576 px**
 - Each photo window: **1452 × 1452 px**
 - Side margin: **100 px**
 - Top margin: **60 px**

@@ -100,7 +100,7 @@ def apply_filter(img: Image.Image, name: str) -> Image.Image:
 def list_themes():
     """
     A theme is a folder OR pair of files in static/frames/themes:
-      <theme_id>.png       - full 1652x4920 RGBA overlay, transparent
+    <theme_id>.png       - full STRIP_WIDTH x STRIP_HEIGHT RGBA overlay, transparent
                               windows where photos show through
       <theme_id>.json      - {"name": "...", "thumbnail": "...", "slots": [...]}
                               slots: list of 3 [x, y, w, h] rects (in strip
@@ -211,52 +211,10 @@ def _fit_cover(img: Image.Image, target_w, target_h) -> Image.Image:
     return resized.crop((left, top, left + target_w, top + target_h))
 
 
-def _load_text_font(size: int):
-    from PIL import ImageFont
-    for candidate in (
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    ):
-        if os.path.exists(candidate):
-            return ImageFont.truetype(candidate, size)
-    return ImageFont.load_default()
-
-
-def _draw_strip_text(canvas: Image.Image, settings: dict):
-    draw = ImageDraw.Draw(canvas)
-    title = str(settings.get("title", "PHOTO BOOTH"))
-    subtitle = str(settings.get("subtitle", ""))
-    show_title = bool(settings.get("show_title", False))
-    show_subtitle = bool(settings.get("show_subtitle", False))
-    if not (show_title or show_subtitle):
-        return
-
-    w, h = canvas.size
-    if show_title and title:
-        font = _load_text_font(max(28, int(w * 0.038)))
-        box = draw.textbbox((0, 0), title, font=font)
-        tw = box[2] - box[0]
-        draw.text(((w - tw) / 2, 12), title, font=font, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-    if show_subtitle and subtitle:
-        font = _load_text_font(max(22, int(w * 0.026)))
-        box = draw.textbbox((0, 0), subtitle, font=font)
-        tw = box[2] - box[0]
-        draw.text(((w - tw) / 2, h - (box[3] - box[1]) - 16), subtitle, font=font, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0))
-
-
-def compose_strip(photos, theme_id, filter_name, text_settings=None) -> Image.Image:
+def compose_strip(photos, theme_id, filter_name) -> Image.Image:
     """Compose a final strip at the exact configured output resolution."""
     theme = get_theme(theme_id)
     canvas = Image.new("RGB", (config.STRIP_WIDTH, config.STRIP_HEIGHT), "white")
-
-    for photo, slot in zip(photos, theme["slots"]):
-        x, y, w, h = slot
-        filtered = apply_filter(photo, filter_name)
-        # The camera/live preview uses this same crop, so guests see the
-        # square framing that will actually enter the printed photo window.
-        filtered = crop_to_aspect(filtered, w / h)
-        fitted = filtered.resize((w, h), Image.LANCZOS)
-        canvas.paste(fitted, (x, y))
 
     if theme["overlay_path"]:
         overlay = Image.open(theme["overlay_path"]).convert("RGBA")
@@ -266,10 +224,14 @@ def compose_strip(photos, theme_id, filter_name, text_settings=None) -> Image.Im
         canvas.alpha_composite(overlay)
         canvas = canvas.convert("RGB")
 
-    # Optional text is drawn last so it remains visible over transparent frame
-    # artwork. Defaults are disabled to preserve existing frame designs.
-    if text_settings:
-        _draw_strip_text(canvas, text_settings)
+    for photo, slot in zip(photos, theme["slots"]):
+        x, y, w, h = slot
+        filtered = apply_filter(photo, filter_name)
+        # The camera/live preview uses this same crop, so guests see the
+        # square framing that will actually enter the printed photo window.
+        filtered = crop_to_aspect(filtered, w / h)
+        fitted = filtered.resize((w, h), Image.LANCZOS)
+        canvas.paste(fitted, (x, y))
 
     return canvas
 

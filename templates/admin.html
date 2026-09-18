@@ -50,7 +50,6 @@
       <button type="button" class="nav-btn active" onclick="showTab('camera')">📷 <span>Camera</span></button>
       <button type="button" class="nav-btn" onclick="showTab('session')">⏱ <span>Session</span></button>
       <button type="button" class="nav-btn" onclick="showTab('frames')">🖼 <span>Frames</span></button>
-      <button type="button" class="nav-btn" onclick="showTab('text')">✍ <span>Text</span></button>
       <button type="button" class="nav-btn" onclick="showTab('output')">🎞 <span>Output</span></button>
       <button type="button" class="nav-btn" onclick="showTab('display')">🖥 <span>Display</span></button>
       <button type="button" class="nav-btn" onclick="showTab('security')">🔐 <span>Security</span></button>
@@ -116,7 +115,7 @@
           <div class="slider-row"><input type="range" id="s-countdown" min="2" max="15" step="1" oninput="updateSliderLabel('countdown')"><span id="lbl-countdown" class="slider-val">5s</span></div>
         </div>
         <div class="setting-card">
-          <label class="setting-label">GIF Capture Duration</label>
+          <label class="setting-label">Video Capture Duration</label>
           <p class="setting-hint">Seconds of motion recorded during each countdown. It cannot exceed the countdown.</p>
           <div class="slider-row"><input type="range" id="s-gif-dur" min="1" max="10" step="1" oninput="updateSliderLabel('gif-dur')"><span id="lbl-gif-dur" class="slider-val">3s</span></div>
         </div>
@@ -124,7 +123,7 @@
       </section>
 
       <section id="tab-frames" class="tab-panel">
-        <div class="page-heading"><p class="kicker">Design</p><h3>Frame &amp; Background</h3><p class="section-sub">Select a frame for guests or upload a transparent overlay. Frame previews preserve the full 1652 × 4920 strip instead of cropping it.</p></div>
+        <div class="page-heading"><p class="kicker">Design</p><h3>Frame &amp; Background</h3><p class="section-sub">Select a frame for guests or upload a transparent overlay. Frame previews preserve the full configured strip instead of cropping it.</p></div>
         <div class="frames-admin-grid" id="frames-admin-grid"></div>
 
         <div class="setting-card mt-16">
@@ -151,18 +150,10 @@
         </div>
       </section>
 
-      <section id="tab-text" class="tab-panel">
-        <div class="page-heading"><p class="kicker">Personalization</p><h3>Strip Text</h3><p class="section-sub">Optional text can be added over the final strip and GIF.</p></div>
-        <div class="setting-card"><label class="setting-label">Title</label><div class="toggle-row"><input type="text" id="t-title" class="input-text" placeholder="PHOTO BOOTH"><label class="toggle-switch"><input type="checkbox" id="t-show-title"><span class="toggle-track"></span></label></div></div>
-        <div class="setting-card"><label class="setting-label">Subtitle</label><div class="toggle-row"><input type="text" id="t-subtitle" class="input-text" placeholder="Event name or date"><label class="toggle-switch"><input type="checkbox" id="t-show-subtitle"><span class="toggle-track"></span></label></div></div>
-        <div class="setting-card mt-16"><label class="setting-label">Strip Preview</label><div class="text-preview-strip" id="text-preview-strip"><div class="tps-title" id="tps-title">PHOTO BOOTH</div><div class="tps-photo">Photo 1</div><div class="tps-photo">Photo 2</div><div class="tps-photo">Photo 3</div><div class="tps-subtitle" id="tps-subtitle"></div></div></div>
-        <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveTextSettings()">Save Text</button></div>
-      </section>
-
       <section id="tab-output" class="tab-panel">
-        <div class="page-heading"><p class="kicker">Files</p><h3>Output Quality</h3><p class="section-sub">Balance GIF resolution and animation smoothness against file size.</p></div>
-        <div class="setting-card"><label class="setting-label">GIF Resolution</label><p class="setting-hint">Percentage of the full strip size ({{ strip_width }} × {{ strip_height }}).</p><div class="slider-row"><input type="range" id="s-gif-scale" min="15" max="80" step="5" oninput="updateSliderLabel('gif-scale')"><span id="lbl-gif-scale" class="slider-val">50%</span></div><p class="setting-hint mt-4" id="gif-dim-hint">Output: 826 × 2460 px</p></div>
-        <div class="setting-card"><label class="setting-label">GIF Frame Rate</label><p class="setting-hint">Frames per second of the output GIF.</p><div class="slider-row"><input type="range" id="s-gif-fps" min="6" max="24" step="2" oninput="updateSliderLabel('gif-fps')"><span id="lbl-gif-fps" class="slider-val">8 fps</span></div></div>
+        <div class="page-heading"><p class="kicker">Files</p><h3>Output Quality</h3><p class="section-sub">Balance MP4 resolution and animation smoothness against file size.</p></div>
+        <div class="setting-card"><label class="setting-label">Video Resolution</label><p class="setting-hint">Percentage of the full strip size ({{ strip_width }} × {{ strip_height }}). H.264 output uses even pixel dimensions.</p><div class="slider-row"><input type="range" id="s-gif-scale" min="15" max="80" step="5" oninput="updateSliderLabel('gif-scale')"><span id="lbl-gif-scale" class="slider-val">50%</span></div><p class="setting-hint mt-4" id="gif-dim-hint">Output: 826 × 2262 px</p></div>
+        <div class="setting-card"><label class="setting-label">Video Frame Rate</label><p class="setting-hint">Frames per second of the output MP4.</p><div class="slider-row"><input type="range" id="s-gif-fps" min="6" max="24" step="2" oninput="updateSliderLabel('gif-fps')"><span id="lbl-gif-fps" class="slider-val">8 fps</span></div></div>
         <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveOutputSettings()">Save Output Settings</button></div>
       </section>
 

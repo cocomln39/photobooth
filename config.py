@@ -27,11 +27,11 @@ PHOTO_ASPECT_RATIO = 1.0
 SHOTS_PER_STRIP = 3
 STRIP_WIDTH = 1652
 # Three square photo windows with generous white margins/gutters.
-STRIP_HEIGHT = 4476
+STRIP_HEIGHT = 4576
 
 STRIP_MARGIN_SIDE = 150
-STRIP_MARGIN_TOP = 80
-STRIP_MARGIN_BOTTOM = 240
+STRIP_MARGIN_TOP = 120
+STRIP_MARGIN_BOTTOM = 300
 STRIP_GAP = 50
 
 # ---------------------------------------------------------------------------
@@ -53,12 +53,12 @@ FILTERS = ["Original", "Warm", "Cool", "Soft Light", "Polaroid", "Monochrome"]
 # ---------------------------------------------------------------------------
 SAVE_ROOT = os.path.join(BASE_DIR, "saves")
 IMAGES_DIR = os.path.join(SAVE_ROOT, "images")
-GIFS_DIR = os.path.join(SAVE_ROOT, "gif")
+VIDEOS_DIR = os.path.join(SAVE_ROOT, "video")
 FRAMES_DIR = os.path.join(BASE_DIR, "static", "frames", "themes")
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 
 os.makedirs(IMAGES_DIR, exist_ok=True)
-os.makedirs(GIFS_DIR, exist_ok=True)
+os.makedirs(VIDEOS_DIR, exist_ok=True)
 os.makedirs(FRAMES_DIR, exist_ok=True)
 
 # ---------------------------------------------------------------------------

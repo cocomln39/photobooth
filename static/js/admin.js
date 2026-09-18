@@ -103,10 +103,6 @@
     $("s-gif-dur").value = Math.min(settings.gif_duration, settings.countdown);
     $("s-gif-scale").value = settings.gif_scale;
     $("s-gif-fps").value = settings.gif_fps;
-    $("t-title").value = settings.title || "";
-    $("t-show-title").checked = !!settings.show_title;
-    $("t-subtitle").value = settings.subtitle || "";
-    $("t-show-subtitle").checked = !!settings.show_subtitle;
     $(`rm-${settings.feed_mode || "fit"}`).checked = true;
     $("n-ip").value = settings.force_host_ip || "";
     $("n-port").value = settings.server_port || 5000;
@@ -120,7 +116,6 @@
     updateSliderLabel("gif-dur");
     updateSliderLabel("gif-scale");
     updateSliderLabel("gif-fps");
-    updateTextPreview();
     updateNetworkInfo();
   }
 
@@ -136,8 +131,10 @@
     const value = Number($(spec[0]).value);
     $(spec[1]).textContent = `${value}${spec[2]}`;
     if (name === "gif-scale") {
-      const w = Math.round((settings.strip_width || 1652) * value / 100);
-      const h = Math.round((settings.strip_height || 4920) * value / 100);
+      const baseW = settings.strip_width || 1652;
+      const baseH = settings.strip_height || 4576;
+      const w = Math.max(160, Math.floor(Math.round(baseW * value / 100) / 2) * 2);
+      const h = Math.floor((baseH * (w / baseW)) / 2) * 2;
       $("gif-dim-hint").textContent = `Output: ${w} × ${h} px`;
     }
     if (name === "countdown") {
@@ -181,25 +178,6 @@
       await saveSettings({ feed_mode: selected ? selected.value : "fit" });
     } catch (err) { toast(err.message, true); }
   };
-
-  window.saveTextSettings = async function () {
-    try {
-      await saveSettings({
-        title: $("t-title").value,
-        show_title: $("t-show-title").checked,
-        subtitle: $("t-subtitle").value,
-        show_subtitle: $("t-show-subtitle").checked,
-      });
-    } catch (err) { toast(err.message, true); }
-  };
-
-  function updateTextPreview() {
-    $("tps-title").textContent = $("t-title").value || "PHOTO BOOTH";
-    $("tps-title").style.display = $("t-show-title").checked ? "block" : "none";
-    $("tps-subtitle").textContent = $("t-subtitle").value || "";
-    $("tps-subtitle").style.display = $("t-show-subtitle").checked ? "block" : "none";
-  }
-  ["t-title", "t-show-title", "t-subtitle", "t-show-subtitle"].forEach((id) => $(id).addEventListener("input", updateTextPreview));
 
   function updateNetworkInfo() {
     const ip = settings.force_host_ip || "Automatic LAN IP";

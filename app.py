@@ -22,7 +22,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory, render
 
 import compositor
 import config
-import gif_builder
+import video_builder
 from camera import camera_manager
 
 app = Flask(__name__)
@@ -35,10 +35,6 @@ DEFAULT_ADMIN_SETTINGS = {
     "gif_scale": 50,
     "gif_fps": config.GIF_CAPTURE_FPS,
     "feed_mode": "fit",
-    "title": "PHOTO BOOTH",
-    "show_title": False,
-    "subtitle": "",
-    "show_subtitle": False,
     "force_host_ip": config.FORCE_HOST_IP or "",
     "server_port": config.SERVER_PORT,
     "camera_source": "local",
@@ -315,31 +311,45 @@ def api_session_capture(shot_index):
 
     duration = float(config.SHOT_DURATION_SECONDS)
     gif_duration = min(float(ADMIN_SETTINGS.get("gif_duration", duration)), duration)
-    interval = 1.0 / max(1, int(config.GIF_CAPTURE_FPS))
+    fps = max(1, int(config.GIF_CAPTURE_FPS))
+    interval = 1.0 / fps
+    target_frames = max(1, round(gif_duration * fps))
     gif_frames = []
     last_frame = None
 
     start = time.monotonic()
-    next_tick = start
+    for frame_index in range(target_frames):
+        target_time = start + frame_index * interval
+        while True:
+            remaining = target_time - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(remaining, 0.005))
+
+        frame = camera_manager.get_frame()
+        if frame is not None:
+            last_frame = frame
+        elif last_frame is not None:
+            frame = last_frame
+        if frame is None:
+            continue
+
+        pil = compositor.cv2_to_pil(frame)
+        # Match the live preview / final photo-window framing first.
+        pil = compositor.crop_to_aspect(pil, config.PHOTO_ASPECT_RATIO)
+        ratio = config.GIF_PANEL_MAX_WIDTH / pil.width
+        pil_small = pil.resize(
+            (config.GIF_PANEL_MAX_WIDTH, int(pil.height * ratio)), Image.LANCZOS
+        )
+        gif_frames.append(pil_small)
+
+    # Keep the final still aligned with the original countdown deadline even
+    # when GIF capture is configured shorter than the countdown.
     while True:
-        now = time.monotonic()
-        if now >= next_tick:
-            frame = camera_manager.get_frame()
-            if frame is not None:
-                last_frame = frame
-                pil = compositor.cv2_to_pil(frame)
-                # Match the live preview / final photo-window framing first.
-                pil = compositor.crop_to_aspect(pil, config.PHOTO_ASPECT_RATIO)
-                ratio = config.GIF_PANEL_MAX_WIDTH / pil.width
-                pil_small = pil.resize(
-                    (config.GIF_PANEL_MAX_WIDTH, int(pil.height * ratio)), Image.LANCZOS
-                )
-                if now - start <= gif_duration:
-                    gif_frames.append(pil_small)
-            next_tick += interval
-        if now - start >= duration:
+        remaining = start + duration - time.monotonic()
+        if remaining <= 0:
             break
-        time.sleep(0.005)
+        time.sleep(min(remaining, 0.005))
 
     # one last fresh frame right at shutter time for the sharpest still
     final_frame = camera_manager.get_frame()
@@ -407,30 +417,35 @@ def api_finalize():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = f"{timestamp}_{session_id}"
     jpg_name = f"{base_name}.jpg"
-    gif_name = f"{base_name}.gif"
+    video_name = f"{base_name}.mp4"
 
-    strip = compositor.compose_strip(photos, theme_id, filter_name, text_settings=ADMIN_SETTINGS)
+    strip = compositor.compose_strip(photos, theme_id, filter_name)
     jpg_path = f"{config.IMAGES_DIR}/{jpg_name}"
     strip.save(jpg_path, format="JPEG", quality=92)
 
-    gif_path = f"{config.GIFS_DIR}/{gif_name}"
-    gif_builder.build_synced_gif(clips, theme_id, filter_name, gif_path, text_settings=ADMIN_SETTINGS)
+    video_path = f"{config.VIDEOS_DIR}/{video_name}"
+    video_builder.build_synced_mp4(
+        clips, theme_id, filter_name, video_path, gif_duration=min(
+            float(ADMIN_SETTINGS.get("gif_duration", config.SHOT_DURATION_SECONDS)),
+            float(config.SHOT_DURATION_SECONDS),
+        ), gif_scale=ADMIN_SETTINGS.get("gif_scale", 50)
+    )
 
     with _state_lock:
         SESSION["final_jpg_name"] = jpg_name
-        SESSION["final_gif_name"] = gif_name
+        SESSION["final_gif_name"] = video_name
 
     ip = get_lan_ip()
     jpg_url = f"http://{ip}:{config.SERVER_PORT}/download/image/{jpg_name}"
-    gif_url = f"http://{ip}:{config.SERVER_PORT}/download/gif/{gif_name}"
+    video_url = f"http://{ip}:{config.SERVER_PORT}/download/video/{video_name}"
 
     return jsonify(
         {
             "ok": True,
             "jpg_url": jpg_url,
-            "gif_url": gif_url,
+            "video_url": video_url,
             "jpg_qr": make_qr_data_uri(jpg_url),
-            "gif_qr": make_qr_data_uri(gif_url),
+            "video_qr": make_qr_data_uri(video_url),
             "strip_preview": pil_to_data_uri(strip.copy().resize(
                 (strip.width // 3, strip.height // 3)
             )),
@@ -511,10 +526,6 @@ def api_admin_settings_save():
             if data["feed_mode"] not in ("fit", "fill"):
                 raise ValueError("feed_mode must be fit or fill")
             updated["feed_mode"] = data["feed_mode"]
-        if "title" in data: updated["title"] = str(data["title"])[:80]
-        if "subtitle" in data: updated["subtitle"] = str(data["subtitle"])[:120]
-        for key in ("show_title", "show_subtitle"):
-            if key in data: updated[key] = bool(data[key])
         if "force_host_ip" in data: updated["force_host_ip"] = str(data["force_host_ip"]).strip()
         if "server_port" in data: integer("server_port", 1024, 65535)
         if "camera_source" in data:
@@ -594,9 +605,9 @@ def download_image(filename):
     return send_from_directory(config.IMAGES_DIR, filename, as_attachment=True)
 
 
-@app.route("/download/gif/<path:filename>")
-def download_gif(filename):
-    return send_from_directory(config.GIFS_DIR, filename, as_attachment=True)
+@app.route("/download/video/<path:filename>")
+def download_video(filename):
+    return send_from_directory(config.VIDEOS_DIR, filename, as_attachment=True)
 
 
 # ---------------------------------------------------------------------------

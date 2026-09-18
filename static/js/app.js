@@ -57,7 +57,7 @@
     btnReviewConfirm: document.getElementById("btn-review-confirm"),
     finalStripImg: document.getElementById("final-strip-img"),
     qrJpg: document.getElementById("qr-jpg"),
-    qrGif: document.getElementById("qr-gif"),
+    qrVideo: document.getElementById("qr-video"),
     btnFinalRestart: document.getElementById("btn-final-restart"),
   };
 
@@ -252,7 +252,7 @@
       const data = await api("/api/session/finalize", { method: "POST" });
       els.finalStripImg.src = data.strip_preview;
       els.qrJpg.src = data.jpg_qr;
-      els.qrGif.src = data.gif_qr;
+      els.qrVideo.src = data.video_qr;
       showScreen("final");
       armIdleReset();
     } catch (err) {
