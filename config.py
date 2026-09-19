@@ -15,11 +15,13 @@ CAMERA_MAX_INDEX_SCAN = 10
 PREVIEW_JPEG_QUALITY = 80
 PREVIEW_STREAM_MAX_WIDTH = 960
 
-# The final photo windows use the same 1:1 framing as the camera feed.
-# The live feed, captured stills, and GIF frames are cropped to this ratio
-# before being placed into the frame, so the guest sees the same composition
-# that appears in the final output.
-PHOTO_ASPECT_RATIO = 1.0
+# Supported photo-window modes. The active mode is selected in the admin panel.
+ASPECT_MODES = {
+	"1:1": {"label": "1:1", "width": 1, "height": 1, "ratio": 1.0},
+	"4:3": {"label": "4:3", "width": 1352, "height": 1014, "ratio": 4 / 3},
+}
+DEFAULT_ASPECT_MODE = "1:1"
+PHOTO_ASPECT_RATIO = ASPECT_MODES[DEFAULT_ASPECT_MODE]["ratio"]
 
 # ---------------------------------------------------------------------------
 # Photo strip output

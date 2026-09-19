@@ -1,9 +1,9 @@
 {
+  "aspect_mode": "4:3",
   "countdown": 5,
   "gif_duration": 3,
   "gif_scale": 80,
   "gif_fps": 24,
-  "feed_mode": "fill",
   "force_host_ip": "",
   "server_port": 5000,
   "camera_source": "local",

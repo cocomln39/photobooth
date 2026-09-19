@@ -30,6 +30,7 @@ app.secret_key = os.environ.get("PHOTOBOOTH_SECRET_KEY", "photobooth-local-admin
 
 
 DEFAULT_ADMIN_SETTINGS = {
+    "aspect_mode": config.DEFAULT_ASPECT_MODE,
     "countdown": int(config.SHOT_DURATION_SECONDS),
     "gif_duration": min(3, int(config.SHOT_DURATION_SECONDS)),
     "gif_scale": 50,
@@ -75,6 +76,20 @@ def _public_admin_settings(settings):
     return {k: settings[k] for k in DEFAULT_ADMIN_SETTINGS if k in settings}
 
 
+def _active_aspect_mode():
+    mode = ADMIN_SETTINGS.get("aspect_mode", config.DEFAULT_ASPECT_MODE)
+    return mode if mode in config.ASPECT_MODES else config.DEFAULT_ASPECT_MODE
+
+
+def _active_aspect_ratio():
+    return config.ASPECT_MODES[_active_aspect_mode()]["ratio"]
+
+
+def _session_aspect_ratio():
+    mode = SESSION.get("aspect_mode", _active_aspect_mode())
+    return config.ASPECT_MODES.get(mode, config.ASPECT_MODES[config.DEFAULT_ASPECT_MODE])["ratio"]
+
+
 ADMIN_SETTINGS = _load_admin_settings()
 ADMIN_PIN_HASH = ADMIN_SETTINGS.get("admin_pin_hash") or _admin_pin_hash(config.ADMIN_PIN)
 # Restore the persisted camera source before the camera worker starts.
@@ -102,6 +117,7 @@ SESSION = {
     "theme_id": "classic",
     "shots": [],        # list of {"photo": PIL.Image, "gif_frames": [PIL.Image, ...]}
     "filter": "Original",
+    "aspect_mode": _active_aspect_mode(),
     "final_jpg_name": None,
     "final_gif_name": None,
 }
@@ -113,6 +129,7 @@ def _reset_session():
         SESSION["theme_id"] = "classic"
         SESSION["shots"] = []
         SESSION["filter"] = "Original"
+        SESSION["aspect_mode"] = _active_aspect_mode()
         SESSION["final_jpg_name"] = None
         SESSION["final_gif_name"] = None
 
@@ -162,14 +179,16 @@ def index():
 
 @app.route("/admin")
 def admin_page():
-    default_slots = compositor.default_slots()
+    default_slots = compositor.default_slots(_active_aspect_mode())
     return render_template(
         "admin.html",
-        themes=compositor.list_themes(),
+        themes=compositor.list_themes(_active_aspect_mode()),
         strip_width=config.STRIP_WIDTH,
         strip_height=config.STRIP_HEIGHT,
         default_slots=default_slots,
-        photo_aspect=config.PHOTO_ASPECT_RATIO,
+        photo_aspect=_active_aspect_ratio(),
+        aspect_mode=_active_aspect_mode(),
+        aspect_modes=config.ASPECT_MODES,
     )
 
 
@@ -186,7 +205,7 @@ def _mjpeg_generator():
         # The same crop is used for captured stills, preventing the final
         # output from unexpectedly cutting off a different part of the image.
         h, w = frame.shape[:2]
-        target_ratio = config.PHOTO_ASPECT_RATIO
+        target_ratio = _session_aspect_ratio()
         current_ratio = w / h
         if current_ratio > target_ratio:
             new_w = max(1, int(round(h * target_ratio)))
@@ -227,12 +246,13 @@ def api_session_start():
     _reset_session()
     return jsonify({"session_id": SESSION["id"], "shots_per_strip": config.SHOTS_PER_STRIP,
                      "shot_duration": config.SHOT_DURATION_SECONDS,
-                     "photo_aspect": config.PHOTO_ASPECT_RATIO})
+                     "photo_aspect": _active_aspect_ratio(),
+                     "aspect_mode": SESSION["aspect_mode"]})
 
 
 @app.route("/api/themes", methods=["GET"])
 def api_themes():
-    themes = compositor.list_themes()
+    themes = compositor.list_themes(_active_aspect_mode())
     return jsonify(
         [{"id": t["id"], "name": t["name"], "thumbnail": t["thumbnail"]} for t in themes]
     )
@@ -244,6 +264,9 @@ def api_themes_upload():
     if auth:
         return auth
     name = request.form.get("name", "").strip()
+    aspect_mode = request.form.get("aspect_mode", config.DEFAULT_ASPECT_MODE)
+    if aspect_mode not in config.ASPECT_MODES:
+        return jsonify({"error": "Unsupported aspect ratio mode"}), 400
     file = request.files.get("file")
     if not file or file.filename == "":
         return jsonify({"error": "No file was uploaded"}), 400
@@ -264,7 +287,7 @@ def api_themes_upload():
             ), 400
 
     try:
-        theme = compositor.save_uploaded_theme(name, file.stream, slots=slots)
+        theme = compositor.save_uploaded_theme(name, file.stream, slots=slots, aspect_mode=aspect_mode)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
@@ -335,7 +358,7 @@ def api_session_capture(shot_index):
 
         pil = compositor.cv2_to_pil(frame)
         # Match the live preview / final photo-window framing first.
-        pil = compositor.crop_to_aspect(pil, config.PHOTO_ASPECT_RATIO)
+        pil = compositor.crop_to_aspect(pil, config.ASPECT_MODES[SESSION["aspect_mode"]]["ratio"])
         ratio = config.GIF_PANEL_MAX_WIDTH / pil.width
         pil_small = pil.resize(
             (config.GIF_PANEL_MAX_WIDTH, int(pil.height * ratio)), Image.LANCZOS
@@ -357,7 +380,7 @@ def api_session_capture(shot_index):
     if final_frame is None:
         return jsonify({"error": "camera not available"}), 503
 
-    still = compositor.crop_to_aspect(compositor.cv2_to_pil(final_frame), config.PHOTO_ASPECT_RATIO)
+    still = compositor.crop_to_aspect(compositor.cv2_to_pil(final_frame), config.ASPECT_MODES[SESSION["aspect_mode"]]["ratio"])
 
     with _state_lock:
         shots = SESSION["shots"]
@@ -377,13 +400,14 @@ def api_filter_preview():
     with _state_lock:
         shots = list(SESSION["shots"])
         theme_id = SESSION["theme_id"]
+        aspect_mode = SESSION["aspect_mode"]
     if len(shots) != config.SHOTS_PER_STRIP or any(s is None for s in shots):
         return jsonify({"error": "not all shots captured yet"}), 400
 
     photos = [s["photo"] for s in shots]
     previews = {}
     for name in config.FILTERS:
-        thumb = compositor.compose_strip_thumbnail(photos, theme_id, name, max_width=300)
+        thumb = compositor.compose_strip_thumbnail(photos, theme_id, name, max_width=300, aspect_mode=aspect_mode)
         previews[name] = pil_to_data_uri(thumb, fmt="JPEG", quality=78)
     return jsonify({"previews": previews})
 
@@ -406,6 +430,7 @@ def api_finalize():
         theme_id = SESSION["theme_id"]
         filter_name = SESSION["filter"]
         session_id = SESSION["id"]
+        aspect_mode = SESSION["aspect_mode"]
 
     if len(shots) != config.SHOTS_PER_STRIP or any(s is None for s in shots):
         return jsonify({"error": "not all shots captured yet"}), 400
@@ -418,13 +443,13 @@ def api_finalize():
     jpg_name = f"{base_name}.jpg"
     video_name = f"{base_name}.mp4"
 
-    strip = compositor.compose_strip(photos, theme_id, filter_name)
+    strip = compositor.compose_strip(photos, theme_id, filter_name, aspect_mode=aspect_mode)
     jpg_path = f"{config.IMAGES_DIR}/{jpg_name}"
     strip.save(jpg_path, format="JPEG", quality=92)
 
     video_path = f"{config.VIDEOS_DIR}/{video_name}"
     video_builder.build_synced_mp4(
-        clips, theme_id, filter_name, video_path, gif_duration=min(
+        clips, theme_id, filter_name, video_path, aspect_mode=aspect_mode, gif_duration=min(
             float(ADMIN_SETTINGS.get("gif_duration", config.SHOT_DURATION_SECONDS)),
             float(config.SHOT_DURATION_SECONDS),
         ), gif_scale=ADMIN_SETTINGS.get("gif_scale", 50)
@@ -490,7 +515,9 @@ def api_admin_settings_get():
     if auth:
         return auth
     settings = _public_admin_settings(ADMIN_SETTINGS)
-    settings["photo_aspect"] = config.PHOTO_ASPECT_RATIO
+    settings["photo_aspect"] = _active_aspect_ratio()
+    settings["aspect_mode"] = _active_aspect_mode()
+    settings["aspect_modes"] = config.ASPECT_MODES
     settings["strip_width"] = config.STRIP_WIDTH
     settings["strip_height"] = config.STRIP_HEIGHT
     settings["camera_index"] = camera_manager.index
@@ -517,6 +544,10 @@ def api_admin_settings_save():
         updated[key] = value
 
     try:
+        if "aspect_mode" in data:
+            if data["aspect_mode"] not in config.ASPECT_MODES:
+                raise ValueError("Unsupported aspect ratio mode")
+            updated["aspect_mode"] = data["aspect_mode"]
         if "countdown" in data: integer("countdown", 2, 15)
         if "gif_duration" in data: integer("gif_duration", 1, 10)
         if "gif_scale" in data: integer("gif_scale", 15, 80)
@@ -540,6 +571,9 @@ def api_admin_settings_save():
         return jsonify({"error": str(exc)}), 400
 
     ADMIN_SETTINGS = updated
+    if "aspect_mode" in data:
+        with _state_lock:
+            SESSION["aspect_mode"] = _active_aspect_mode()
     config.SHOT_DURATION_SECONDS = float(updated["countdown"])
     config.GIF_CAPTURE_FPS = int(updated["gif_fps"])
     config.GIF_FRAME_DURATION_MS = int(1000 / max(1, config.GIF_CAPTURE_FPS))
@@ -558,7 +592,11 @@ def api_admin_settings_save():
     except (ValueError, RuntimeError) as exc:
         return jsonify({"error": str(exc)}), 400
 
-    return jsonify({"ok": True, "settings": _public_admin_settings(ADMIN_SETTINGS), "restart_required": True})
+    return jsonify({
+        "ok": True,
+        "settings": _public_admin_settings(ADMIN_SETTINGS),
+        "restart_required": "server_port" in data or "force_host_ip" in data,
+    })
 
 
 @app.route("/api/admin/pin", methods=["POST"])

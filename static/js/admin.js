@@ -99,6 +99,9 @@
   }
 
   function applySettings() {
+    $("aspect-mode").value = settings.aspect_mode || "1:1";
+    const preview = document.querySelector(".preview-wrap");
+    if (preview) preview.style.aspectRatio = settings.aspect_mode === "4:3" ? "4 / 3" : "1 / 1";
     $("s-countdown").value = settings.countdown;
     $("s-gif-dur").value = Math.min(settings.gif_duration, settings.countdown);
     $("s-gif-scale").value = settings.gif_scale;
@@ -155,6 +158,15 @@
     applySettings();
     toast(data.restart_required ? "Saved. Restart required for network changes." : "Saved.");
   }
+
+  window.saveAspectMode = async function () {
+    try {
+      await saveSettings({ aspect_mode: $("aspect-mode").value });
+      await loadThemes();
+      toast("Aspect ratio saved.");
+      window.location.reload();
+    } catch (err) { toast(err.message, true); }
+  };
 
   window.saveSessionSettings = async function () {
     try {
@@ -354,6 +366,7 @@
     const form = new FormData();
     form.append("name", name || file.name.replace(/\.[^.]+$/, ""));
     form.append("file", file);
+    form.append("aspect_mode", $("custom-frame-aspect").value);
     status.textContent = "Uploading…"; status.className = "status-msg";
     try {
       const data = await api("/api/themes/upload", { method: "POST", body: form });

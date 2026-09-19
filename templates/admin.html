@@ -92,6 +92,14 @@
           <div id="droidcam-status" class="setting-hint mt-8"></div>
         </div>
         <div class="setting-card">
+          <label class="setting-label">Photo Aspect Ratio</label>
+          <p class="setting-hint">Choose the photo window size used by the live view, captured photos, and strip templates.</p>
+          <select class="text-input" id="aspect-mode">
+            {% for mode_id, mode in aspect_modes.items() %}<option value="{{ mode_id }}">{{ mode.label }}{% if mode_id == '4:3' %} (1352 × 1014){% endif %}</option>{% endfor %}
+          </select>
+          <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveAspectMode()">Save Aspect Ratio</button></div>
+        </div>
+        <div class="setting-card">
           <div class="card-heading-row">
             <div>
               <label class="setting-label">Live Preview</label>
@@ -99,7 +107,7 @@
             </div>
             <span class="aspect-badge">{{ default_slots[0][2] }} × {{ default_slots[0][3] }} photo window</span>
           </div>
-          <div class="preview-wrap">
+          <div class="preview-wrap" data-aspect="{{ default_slots[0][2] / default_slots[0][3] }}">
             <img id="admin-live-feed" src="" alt="Live Feed">
           </div>
         </div>
@@ -131,6 +139,9 @@
             <input type="text" id="custom-frame-label" placeholder="Frame name" class="input-text">
             <label class="btn-secondary upload-label">Choose File<input type="file" id="custom-frame-file" accept=".png,.jpg,.jpeg" style="display:none"></label>
             <button type="button" class="btn-primary" onclick="uploadFrame()">Upload</button>
+          </div>
+          <div class="form-grid-2 mt-8">
+            <div><label class="setting-label small" for="custom-frame-aspect">Aspect Ratio Mode</label><select id="custom-frame-aspect" class="text-input">{% for mode_id, mode in aspect_modes.items() %}<option value="{{ mode_id }}">{{ mode.label }}</option>{% endfor %}</select></div>
           </div>
           <p id="upload-status" class="status-msg"></p>
         </div>

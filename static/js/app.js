@@ -32,6 +32,7 @@
   const state = {
     shotsPerStrip: 3,
     shotDuration: 5,
+    photoAspect: 1,
     themeId: "classic",
     currentShot: 0,
     filterPreviews: {},
@@ -70,6 +71,7 @@
       const startData = await api("/api/session/start", { method: "POST" });
       state.shotsPerStrip = startData.shots_per_strip;
       state.shotDuration = startData.shot_duration;
+      state.photoAspect = startData.photo_aspect || 1;
 
       const themes = await api("/api/themes");
       renderThemeGrid(themes);
@@ -126,6 +128,8 @@
       s.style.backgroundImage = "";
     });
     els.liveFeed.src = "/video_feed?ts=" + Date.now();
+    const viewfinder = document.querySelector("#screen-capture .viewfinder");
+    if (viewfinder) viewfinder.style.aspectRatio = `${state.photoAspect || 1}`;
     updateCaptureHeading();
     els.btnTakeShot.disabled = false;
     els.btnTakeShot.textContent = "Start countdown";
@@ -138,16 +142,20 @@
     const rail = els.shotRail;
     if (!viewfinder || !rail) return;
 
-    const size = Math.round(viewfinder.getBoundingClientRect().width);
-    if (!size) return;
+    const width = Math.round(viewfinder.getBoundingClientRect().width);
+    if (!width) return;
+    const aspect = state.photoAspect || 1;
+    const height = Math.round(width / aspect);
+    viewfinder.style.height = `${height}px`;
     const styles = getComputedStyle(rail);
     const gap = parseFloat(styles.rowGap || styles.gap) || 0;
-    const slotSize = Math.max(1, Math.floor((size - gap * 2) / 3));
-    rail.style.width = `${slotSize}px`;
-    rail.style.height = `${size}px`;
+    const slotWidth = Math.max(1, Math.floor(width / 3));
+    const slotHeight = Math.max(1, Math.floor(slotWidth / aspect));
+    rail.style.width = `${slotWidth}px`;
+    rail.style.height = `${slotHeight * 3 + gap * 2}px`;
     rail.querySelectorAll(".shot-slot").forEach((slot) => {
-      slot.style.width = `${slotSize}px`;
-      slot.style.height = `${slotSize}px`;
+      slot.style.width = `${slotWidth}px`;
+      slot.style.height = `${slotHeight}px`;
     });
   }
 

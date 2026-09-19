@@ -97,7 +97,7 @@ def apply_filter(img: Image.Image, name: str) -> Image.Image:
 # ---------------------------------------------------------------------------
 # Frame themes
 # ---------------------------------------------------------------------------
-def list_themes():
+def list_themes(aspect_mode=config.DEFAULT_ASPECT_MODE):
     """
     A theme is a folder OR pair of files in static/frames/themes:
     <theme_id>.png       - full STRIP_WIDTH x STRIP_HEIGHT RGBA overlay, transparent
@@ -108,7 +108,7 @@ def list_themes():
     If no themes exist, a single built-in "Classic" theme (no overlay,
     default even grid, thin white border) is used.
     """
-    themes = [_default_theme()]
+    themes = [_default_theme(aspect_mode)]
     if not os.path.isdir(config.FRAMES_DIR):
         return themes
     for fname in sorted(os.listdir(config.FRAMES_DIR)):
@@ -122,37 +122,42 @@ def list_themes():
         except Exception:
             continue
         overlay_path = os.path.join(config.FRAMES_DIR, meta.get("overlay", f"{theme_id}.png"))
+        theme_mode = meta.get("aspect_mode", config.DEFAULT_ASPECT_MODE)
+        if theme_mode != aspect_mode:
+            continue
         themes.append(
             {
                 "id": theme_id,
                 "name": meta.get("name", theme_id.title()),
                 "thumbnail": f"/static/frames/themes/{os.path.basename(meta.get('thumbnail', meta.get('overlay', '')))}",
                 "overlay_path": overlay_path if os.path.exists(overlay_path) else None,
-                "slots": meta.get("slots", default_slots()),
+                "aspect_mode": theme_mode,
+                "slots": meta.get("slots", default_slots(theme_mode)),
             }
         )
     return themes
 
 
-def _default_theme():
+def _default_theme(aspect_mode=config.DEFAULT_ASPECT_MODE):
     return {
         "id": "classic",
         "name": "Classic",
         "thumbnail": None,
         "overlay_path": None,
-        "slots": default_slots(),
+        "aspect_mode": aspect_mode,
+        "slots": default_slots(aspect_mode),
     }
 
 
-def get_theme(theme_id):
-    for t in list_themes():
+def get_theme(theme_id, aspect_mode=config.DEFAULT_ASPECT_MODE):
+    for t in list_themes(aspect_mode):
         if t["id"] == theme_id:
             return t
-    return _default_theme()
+    return _default_theme(aspect_mode)
 
 
-def default_slots():
-    """Compute the 3 square photo slots with generous outer margins."""
+def default_slots(aspect_mode=config.DEFAULT_ASPECT_MODE):
+    """Compute photo slots while preserving configured top, side, and gap margins."""
     w = config.STRIP_WIDTH
     h = config.STRIP_HEIGHT
     mx = config.STRIP_MARGIN_SIDE
@@ -163,7 +168,8 @@ def default_slots():
 
     slot_w = w - 2 * mx
     total_gap = gap * (n - 1)
-    slot_h = (h - mt - mb - total_gap) / n
+    mode = config.ASPECT_MODES.get(aspect_mode, config.ASPECT_MODES[config.DEFAULT_ASPECT_MODE])
+    slot_h = mode["height"] if aspect_mode == "4:3" else (h - mt - mb - total_gap) / n
 
     slots = []
     y = mt
@@ -211,10 +217,17 @@ def _fit_cover(img: Image.Image, target_w, target_h) -> Image.Image:
     return resized.crop((left, top, left + target_w, top + target_h))
 
 
-def compose_strip(photos, theme_id, filter_name) -> Image.Image:
+def compose_strip(photos, theme_id, filter_name, aspect_mode=config.DEFAULT_ASPECT_MODE) -> Image.Image:
     """Compose a final strip at the exact configured output resolution."""
-    theme = get_theme(theme_id)
+    theme = get_theme(theme_id, aspect_mode)
     canvas = Image.new("RGB", (config.STRIP_WIDTH, config.STRIP_HEIGHT), "white")
+
+    for photo, slot in zip(photos, theme["slots"]):
+        x, y, w, h = slot
+        filtered = apply_filter(photo, filter_name)
+        filtered = crop_to_aspect(filtered, w / h)
+        fitted = filtered.resize((w, h), Image.LANCZOS)
+        canvas.paste(fitted, (x, y))
 
     if theme["overlay_path"]:
         overlay = Image.open(theme["overlay_path"]).convert("RGBA")
@@ -224,21 +237,12 @@ def compose_strip(photos, theme_id, filter_name) -> Image.Image:
         canvas.alpha_composite(overlay)
         canvas = canvas.convert("RGB")
 
-    for photo, slot in zip(photos, theme["slots"]):
-        x, y, w, h = slot
-        filtered = apply_filter(photo, filter_name)
-        # The camera/live preview uses this same crop, so guests see the
-        # square framing that will actually enter the printed photo window.
-        filtered = crop_to_aspect(filtered, w / h)
-        fitted = filtered.resize((w, h), Image.LANCZOS)
-        canvas.paste(fitted, (x, y))
-
     return canvas
 
 
-def compose_strip_thumbnail(photos, theme_id, filter_name, max_width=420) -> Image.Image:
+def compose_strip_thumbnail(photos, theme_id, filter_name, max_width=420, aspect_mode=config.DEFAULT_ASPECT_MODE) -> Image.Image:
     """Cheaper low-res version for fast filter-preview thumbnails."""
-    full = compose_strip(photos, theme_id, filter_name)
+    full = compose_strip(photos, theme_id, filter_name, aspect_mode)
     ratio = max_width / full.width
     return full.resize((max_width, int(full.height * ratio)), Image.LANCZOS)
 
@@ -279,7 +283,7 @@ def _contain_onto_canvas(img: Image.Image, canvas_w, canvas_h) -> Image.Image:
     return canvas
 
 
-def save_uploaded_theme(name: str, file_stream, slots=None) -> dict:
+def save_uploaded_theme(name: str, file_stream, slots=None, aspect_mode=config.DEFAULT_ASPECT_MODE) -> dict:
     """
     Save a staff-uploaded frame overlay as a new selectable theme.
 
@@ -319,12 +323,13 @@ def save_uploaded_theme(name: str, file_stream, slots=None) -> dict:
         "name": display_name,
         "overlay": overlay_filename,
         "thumbnail": thumb_filename,
-        "slots": slots if slots else default_slots(),
+        "aspect_mode": aspect_mode,
+        "slots": slots if slots else default_slots(aspect_mode),
     }
     with open(json_path, "w") as f:
         json.dump(meta, f, indent=2)
 
-    return get_theme(theme_id)
+    return get_theme(theme_id, aspect_mode)
 
 
 def delete_theme(theme_id: str) -> bool:

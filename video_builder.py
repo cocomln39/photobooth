@@ -32,7 +32,7 @@ def _resample_clip(clip, target_length):
     ]
 
 
-def build_synced_mp4(clips, theme_id, filter_name, out_path, gif_duration=None, gif_scale=50):
+def build_synced_mp4(clips, theme_id, filter_name, out_path, aspect_mode=config.DEFAULT_ASPECT_MODE, gif_duration=None, gif_scale=50):
     """
     clips: list of 3 lists of PIL RGB frames (already in chronological
            order), one list per shot, roughly config.GIF_CAPTURE_FPS fps.
@@ -42,7 +42,7 @@ def build_synced_mp4(clips, theme_id, filter_name, out_path, gif_duration=None, 
     gif_duration: target duration in seconds for every panel.
     gif_scale: output width as a percentage of the full strip width.
     """
-    theme = compositor.get_theme(theme_id)
+    theme = compositor.get_theme(theme_id, aspect_mode)
     slots = theme["slots"]
     if not clips:
         raise ValueError("No GIF frames were captured for this session")
