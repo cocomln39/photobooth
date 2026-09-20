@@ -25,19 +25,6 @@
     </div>
   </section>
 
-  <!-- ============ THEME SELECT ============ -->
-  <section class="screen" id="screen-theme" data-screen="theme">
-    <header class="step-header">
-      <p class="kicker">Choose a look</p>
-      <h2>Pick your frame</h2>
-    </header>
-    <div class="theme-grid" id="theme-grid"><!-- populated by JS --></div>
-    <div class="bottom-bar">
-      <button class="btn btn-ghost" id="btn-theme-back">Back</button>
-      <button class="btn btn-primary" id="btn-theme-next">Continue</button>
-    </div>
-  </section>
-
   <!-- ============ CAPTURE ============ -->
   <section class="screen" id="screen-capture" data-screen="capture">
     <header class="step-header">
@@ -62,6 +49,25 @@
     </div>
   </section>
 
+  <!-- ============ FRAME SELECT ============ -->
+  <section class="screen" id="screen-frame" data-screen="frame">
+    <header class="step-header">
+      <p class="kicker">Almost there</p>
+      <h2>Pick your frame</h2>
+    </header>
+
+    <div class="review-layout">
+      <div class="strip-preview-wrap">
+        <img id="frame-preview-img" src="" alt="Your photo strip with the selected frame applied">
+      </div>
+      <div class="filter-list" id="frame-list"><!-- populated by JS --></div>
+    </div>
+
+    <div class="bottom-bar bottom-bar-right">
+      <button class="btn btn-primary" id="btn-frame-next">Continue</button>
+    </div>
+  </section>
+
   <!-- ============ FILTER / REVIEW ============ -->
   <section class="screen" id="screen-review" data-screen="review">
     <header class="step-header">
@@ -76,7 +82,7 @@
       <div class="filter-list" id="filter-list"><!-- populated by JS --></div>
     </div>
 
-    <div class="bottom-bar">
+    <div class="bottom-bar bottom-bar-right">
       <button class="btn btn-ghost" id="btn-review-retake">Start over</button>
       <button class="btn btn-primary" id="btn-review-confirm">Looks great</button>
     </div>

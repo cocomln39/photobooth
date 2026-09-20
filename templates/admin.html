@@ -95,7 +95,7 @@
           <label class="setting-label">Photo Aspect Ratio</label>
           <p class="setting-hint">Choose the photo window size used by the live view, captured photos, and strip templates.</p>
           <select class="text-input" id="aspect-mode">
-            {% for mode_id, mode in aspect_modes.items() %}<option value="{{ mode_id }}">{{ mode.label }}{% if mode_id == '4:3' %} (1352 × 1014){% endif %}</option>{% endfor %}
+            {% for mode_id, mode in aspect_modes.items() %}<option value="{{ mode_id }}">{{ mode.label }}</option>{% endfor %}
           </select>
           <div class="bottom-save"><button type="button" class="btn-primary" onclick="saveAspectMode()">Save Aspect Ratio</button></div>
         </div>

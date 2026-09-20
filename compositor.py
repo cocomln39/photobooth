@@ -27,19 +27,31 @@ def cv2_to_pil(frame_bgr):
 
 # ---------------------------------------------------------------------------
 # Filters
+#
+# Channel LUTs are precomputed once at import time so .point() never calls
+# Python per-pixel — it just looks up a 256-entry list in C.
 # ---------------------------------------------------------------------------
+
+# Warm
+_WARM_R = [min(255, int(i * 1.12) + 8) for i in range(256)]
+_WARM_B = [max(0, int(i * 0.88) - 8) for i in range(256)]
+
 def _warm(img):
     r, g, b = img.split()
-    r = r.point(lambda i: min(255, int(i * 1.12) + 8))
-    b = b.point(lambda i: max(0, int(i * 0.88) - 8))
+    r = r.point(_WARM_R)
+    b = b.point(_WARM_B)
     out = Image.merge("RGB", (r, g, b))
     return ImageEnhance.Color(out).enhance(1.12)
 
 
+# Cool
+_COOL_R = [max(0, int(i * 0.90) - 5) for i in range(256)]
+_COOL_B = [min(255, int(i * 1.15) + 8) for i in range(256)]
+
 def _cool(img):
     r, g, b = img.split()
-    r = r.point(lambda i: max(0, int(i * 0.90) - 5))
-    b = b.point(lambda i: min(255, int(i * 1.15) + 8))
+    r = r.point(_COOL_R)
+    b = b.point(_COOL_B)
     out = Image.merge("RGB", (r, g, b))
     return ImageEnhance.Color(out).enhance(0.95)
 
@@ -52,15 +64,20 @@ def _soft_light(img):
     return softened
 
 
+# Polaroid — channel LUTs for the colour-cast step
+_POL_R = [min(255, int(i * 1.06) + 6) for i in range(256)]
+_POL_G = [min(255, int(i * 1.02) + 3) for i in range(256)]
+_POL_B = [max(0, int(i * 0.90)) for i in range(256)]
+
 def _polaroid(img):
     out = ImageEnhance.Color(img).enhance(0.82)
     out = ImageEnhance.Contrast(out).enhance(0.95)
     out = ImageEnhance.Brightness(out).enhance(1.05)
     # warm-yellow cast typical of instant film
     r, g, b = out.split()
-    r = r.point(lambda i: min(255, int(i * 1.06) + 6))
-    g = g.point(lambda i: min(255, int(i * 1.02) + 3))
-    b = b.point(lambda i: max(0, int(i * 0.90)))
+    r = r.point(_POL_R)
+    g = g.point(_POL_G)
+    b = b.point(_POL_B)
     out = Image.merge("RGB", (r, g, b))
     # soft vignette
     w, h = out.size

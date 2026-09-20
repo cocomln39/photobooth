@@ -198,7 +198,8 @@ img { -webkit-user-drag: none; }
   padding-top: 24px;
 }
 
-.bottom-bar:not(.center-bar) { justify-content: flex-end; }
+.bottom-bar:not(.center-bar):not(.bottom-bar-right) { justify-content: flex-start; }
+.bottom-bar-right { justify-content: flex-end; }
 
 .center-bar { justify-content: center; }
 
@@ -273,8 +274,8 @@ img { -webkit-user-drag: none; }
 
 .viewfinder {
   position: relative;
-  width: min(58vh, 62vw);
-  height: min(58vh, 62vw);
+  width: min(72.5vh, 77.5vw);
+  height: min(72.5vh, 77.5vw);
   max-width: 92%;
   max-height: 62vh;
   border: 3px solid var(--line);
@@ -327,13 +328,13 @@ img { -webkit-user-drag: none; }
 
 .shot-rail {
   display: flex;
-  gap: 14px;
+  gap: 17px;
   margin: 22px 0 6px;
 }
 
 .shot-slot {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 150px;
   flex: 0 0 auto;
   border: 2px solid var(--line);
   border-radius: var(--radius-sm);
@@ -362,7 +363,8 @@ img { -webkit-user-drag: none; }
   justify-content: center;
 }
 
-#strip-preview-img {
+#strip-preview-img,
+#frame-preview-img {
   max-height: 100%;
   max-width: 320px;
   border-radius: 2px;
@@ -520,9 +522,9 @@ img { -webkit-user-drag: none; }
   #screen-capture .viewfinder { grid-column: 1; grid-row: 2; justify-self: end; }
   #screen-capture .shot-rail { grid-column: 2; grid-row: 2; flex-direction: column; height: auto; width: 80px; margin: 0; }
   #screen-capture .bottom-bar { grid-column: 1 / -1; grid-row: 3; }
-  .viewfinder { width: min(52vh, calc(100vw - 150px)); height: min(52vh, calc(100vw - 150px)); max-width: none; max-height: none; border-width: 2px; }
-  .shot-rail { gap: 8px; }
-  .shot-slot { width: 80px; height: 80px; flex: 0 0 auto; }
+  .viewfinder { width: min(65vh, calc(100vw - 150px)); height: min(65vh, calc(100vw - 150px)); max-width: none; max-height: none; border-width: 2px; }
+  .shot-rail { gap: 10px; }
+  .shot-slot { width: 100px; height: 100px; flex: 0 0 auto; }
   .bottom-bar { gap: 8px; padding-top: 8px; }
   .btn { font-size: 14px; padding: 11px 16px; }
   .countdown-overlay { font-size: 100px; }

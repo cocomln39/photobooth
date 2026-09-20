@@ -7,6 +7,7 @@ Each clip may have a slightly different frame count because capture timing
 is driven by a live camera. Clips are resampled onto one shared timeline
 before compositing so every panel has the same duration and playback rate.
 """
+from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 import subprocess
 
@@ -32,6 +33,88 @@ def _resample_clip(clip, target_length):
     ]
 
 
+def _last_seconds_window(clip, seconds, fps):
+    """Return the last N seconds of a clip, keeping the most recent motion."""
+    if not clip:
+        return []
+    frames_needed = max(1, round(float(seconds) * max(1, int(fps))))
+    if len(clip) <= frames_needed:
+        return list(clip)
+    return list(clip[-frames_needed:])
+
+
+def _build_single_frame(i, synced_clips, scaled_slots, filter_name, video_w, video_h, overlay_img):
+    """Compose one output frame at output resolution. Called in parallel."""
+    frame = Image.new("RGB", (video_w, video_h), "white")
+    for clip, (x, y, w, h) in zip(synced_clips, scaled_slots):
+        src = clip[i]
+        if src is None:
+            continue
+        # Crop and resize to slot size first (cheaper), then filter
+        cropped = compositor.crop_to_aspect(src, w / h)
+        fitted = cropped.resize((w, h), Image.BILINEAR)
+        fitted = compositor.apply_filter(fitted, filter_name)
+        frame.paste(fitted, (x, y))
+    if overlay_img is not None:
+        frame = frame.convert("RGBA")
+        frame.alpha_composite(overlay_img)
+        frame = frame.convert("RGB")
+    return frame
+
+
+def _build_output_frames(clips, theme, filter_name, target_length, freeze_seconds=1.0, gif_scale=50, motion_window_seconds=3.0):
+    """Return the composed frames with the final captured still as the last frame."""
+    slots = theme["slots"]
+    motion_clips = [_last_seconds_window(clip, motion_window_seconds, config.GIF_CAPTURE_FPS) for clip in clips]
+    synced_clips = [_resample_clip(clip, target_length) for clip in motion_clips]
+
+    # Compute output dimensions once
+    try:
+        scale = max(15, min(80, int(gif_scale)))
+    except (TypeError, ValueError):
+        scale = 50
+    video_w = max(160, int(config.STRIP_WIDTH * scale / 100))
+    video_w -= video_w % 2
+    video_h = int(config.STRIP_HEIGHT * (video_w / config.STRIP_WIDTH))
+    video_h -= video_h % 2
+
+    # Scale slots to output dimensions once, up front
+    full_w = config.STRIP_WIDTH
+    full_h = config.STRIP_HEIGHT
+    scaled_slots = [
+        (
+            int(x * video_w / full_w),
+            int(y * video_h / full_h),
+            max(2, int(w * video_w / full_w)),
+            max(2, int(h * video_h / full_h)),
+        )
+        for x, y, w, h in slots
+    ]
+
+    # Load and scale overlay once, not per frame
+    overlay_img = None
+    if theme["overlay_path"]:
+        overlay_img = Image.open(theme["overlay_path"]).convert("RGBA")
+        if overlay_img.size != (video_w, video_h):
+            overlay_img = overlay_img.resize((video_w, video_h), Image.BILINEAR)
+
+    # Build frames in parallel across available CPU threads
+    with ThreadPoolExecutor() as pool:
+        out_frames = list(pool.map(
+            lambda i: _build_single_frame(
+                i, synced_clips, scaled_slots, filter_name,
+                video_w, video_h, overlay_img,
+            ),
+            range(target_length),
+        ))
+
+    if not out_frames:
+        return []
+
+    freeze_frames = max(1, round(float(freeze_seconds) * config.GIF_CAPTURE_FPS))
+    return out_frames + [out_frames[-1].copy() for _ in range(freeze_frames)]
+
+
 def build_synced_mp4(clips, theme_id, filter_name, out_path, aspect_mode=config.DEFAULT_ASPECT_MODE, gif_duration=None, gif_scale=50):
     """
     clips: list of 3 lists of PIL RGB frames (already in chronological
@@ -43,7 +126,6 @@ def build_synced_mp4(clips, theme_id, filter_name, out_path, aspect_mode=config.
     gif_scale: output width as a percentage of the full strip width.
     """
     theme = compositor.get_theme(theme_id, aspect_mode)
-    slots = theme["slots"]
     if not clips:
         raise ValueError("No GIF frames were captured for this session")
 
@@ -55,44 +137,16 @@ def build_synced_mp4(clips, theme_id, filter_name, out_path, aspect_mode=config.
         target_length = max(captured_lengths)
     else:
         target_length = max(1, round(float(gif_duration) * config.GIF_CAPTURE_FPS))
-    synced_clips = [_resample_clip(clip, target_length) for clip in clips]
 
-    canvas_w, canvas_h = config.STRIP_WIDTH, config.STRIP_HEIGHT
-    out_frames = []
-
-    for i in range(target_length):
-        frame = Image.new("RGB", (canvas_w, canvas_h), "white")
-
-        if theme["overlay_path"]:
-            overlay = Image.open(theme["overlay_path"]).convert("RGBA")
-            if overlay.size != frame.size:
-                overlay = overlay.resize(frame.size, Image.LANCZOS)
-            frame = frame.convert("RGBA")
-            frame.alpha_composite(overlay)
-            frame = frame.convert("RGB")
-
-        for clip, slot in zip(synced_clips, slots):
-            src = clip[i]
-            if src is None:
-                continue
-            filtered = compositor.apply_filter(src, filter_name)
-            x, y, w, h = slot
-            filtered = compositor.crop_to_aspect(filtered, w / h)
-            fitted = filtered.resize((w, h), Image.LANCZOS)
-            frame.paste(fitted, (x, y))
-
-        # Downscale the whole composited strip-frame for a reasonable
-        # video file size while keeping the 3-panel layout intact.
-        try:
-            scale = max(15, min(80, int(gif_scale)))
-        except (TypeError, ValueError):
-            scale = 50
-        video_w = max(160, int(config.STRIP_WIDTH * scale / 100))
-        # yuv420p/H.264 requires even dimensions.
-        video_w -= video_w % 2
-        video_h = int(frame.height * (video_w / frame.width))
-        video_h -= video_h % 2
-        out_frames.append(frame.resize((video_w, video_h), Image.LANCZOS).convert("RGB"))
+    out_frames = _build_output_frames(
+        clips,
+        theme,
+        filter_name,
+        target_length,
+        freeze_seconds=0.5,
+        gif_scale=gif_scale,
+        motion_window_seconds=3.0,
+    )
 
     video_w, video_h = out_frames[0].size
     command = [
@@ -106,8 +160,8 @@ def build_synced_mp4(clips, theme_id, filter_name, out_path, aspect_mode=config.
         "-i", "-",
         "-an",
         "-c:v", "libx264",
-        "-preset", "medium",
-        "-crf", "18",
+        "-preset", "fast",
+        "-crf", "23",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
         out_path,

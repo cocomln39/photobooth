@@ -254,7 +254,7 @@ def api_session_start():
 def api_themes():
     themes = compositor.list_themes(_active_aspect_mode())
     return jsonify(
-        [{"id": t["id"], "name": t["name"], "thumbnail": t["thumbnail"]} for t in themes]
+        [{"id": t["id"], "name": t["name"], "thumbnail": t["thumbnail"]} for t in themes if t["id"] != "classic"]
     )
 
 
@@ -381,7 +381,7 @@ def api_session_capture(shot_index):
         return jsonify({"error": "camera not available"}), 503
 
     still = compositor.crop_to_aspect(compositor.cv2_to_pil(final_frame), config.ASPECT_MODES[SESSION["aspect_mode"]]["ratio"])
-
+    
     with _state_lock:
         shots = SESSION["shots"]
         while len(shots) <= shot_index:
@@ -391,6 +391,27 @@ def api_session_capture(shot_index):
     thumb = still.copy()
     thumb.thumbnail((500, 500))
     return jsonify({"ok": True, "shot_index": shot_index, "preview": pil_to_data_uri(thumb)})
+
+
+@app.route("/api/session/frame_previews", methods=["POST"])
+def api_frame_previews():
+    """Render a strip preview for each selectable frame so the UI can show
+    a full-size-looking strip thumbnail in the same style as the filter picker."""
+    with _state_lock:
+        shots = list(SESSION["shots"])
+        filter_name = SESSION.get("filter", "Original")
+        aspect_mode = SESSION["aspect_mode"]
+    if len(shots) != config.SHOTS_PER_STRIP or any(s is None for s in shots):
+        return jsonify({"error": "not all shots captured yet"}), 400
+
+    photos = [s["photo"] for s in shots]
+    previews = {}
+    for theme in compositor.list_themes(aspect_mode):
+        if theme["id"] == "classic":
+            continue
+        thumb = compositor.compose_strip_thumbnail(photos, theme["id"], filter_name, max_width=300, aspect_mode=aspect_mode)
+        previews[theme["id"]] = pil_to_data_uri(thumb, fmt="JPEG", quality=78)
+    return jsonify({"previews": previews})
 
 
 @app.route("/api/session/filter_preview", methods=["POST"])

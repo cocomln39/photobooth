@@ -34,6 +34,8 @@
     shotDuration: 5,
     photoAspect: 1,
     themeId: "classic",
+    framePreviews: {},
+    frameNames: {},
     currentShot: 0,
     filterPreviews: {},
     selectedFilter: "Original",
@@ -42,9 +44,9 @@
 
   const els = {
     btnStart: document.getElementById("btn-start"),
-    themeGrid: document.getElementById("theme-grid"),
-    btnThemeBack: document.getElementById("btn-theme-back"),
-    btnThemeNext: document.getElementById("btn-theme-next"),
+    frameList: document.getElementById("frame-list"),
+    framePreviewImg: document.getElementById("frame-preview-img"),
+    btnFrameNext: document.getElementById("btn-frame-next"),
     liveFeed: document.getElementById("live-feed"),
     countdownNum: document.getElementById("countdown-num"),
     flashEl: document.getElementById("flash-el"),
@@ -72,10 +74,8 @@
       state.shotsPerStrip = startData.shots_per_strip;
       state.shotDuration = startData.shot_duration;
       state.photoAspect = startData.photo_aspect || 1;
-
-      const themes = await api("/api/themes");
-      renderThemeGrid(themes);
-      showScreen("theme");
+      state.themeId = "classic";
+      startCaptureFlow();
     } catch (err) {
       alert(err.message);
     } finally {
@@ -83,39 +83,52 @@
     }
   });
 
-  function renderThemeGrid(themes) {
-    els.themeGrid.innerHTML = "";
-    themes.forEach((t, i) => {
-      const card = document.createElement("button");
-      card.className = "theme-card" + (i === 0 ? " selected" : "");
-      card.dataset.themeId = t.id;
-      const thumbSrc = t.thumbnail || "";
-      card.innerHTML = `
-        <div class="theme-thumb">${thumbSrc ? `<img src="${thumbSrc}" alt="${t.name} frame preview">` : ""}</div>
-        <div class="theme-name">${t.name}</div>
-      `;
-      card.addEventListener("click", () => {
-        els.themeGrid.querySelectorAll(".theme-card").forEach((c) => c.classList.remove("selected"));
-        card.classList.add("selected");
-        state.themeId = t.id;
+  function renderFrameList() {
+    const themes = Object.keys(state.framePreviews || {});
+    if (!themes.length) return;
+
+    els.frameList.innerHTML = "";
+    themes.forEach((themeId) => {
+      const name = state.frameNames[themeId] || themeId;
+      const row = document.createElement("button");
+      row.className = "filter-row" + (themeId === state.themeId ? " selected" : "");
+      row.innerHTML = `<img src="${state.framePreviews[themeId]}" alt="${name} frame preview"><span>${name}</span>`;
+      row.addEventListener("click", async () => {
+        state.themeId = themeId;
+        els.frameList.querySelectorAll(".filter-row").forEach((r) => r.classList.remove("selected"));
+        row.classList.add("selected");
+        els.framePreviewImg.src = state.framePreviews[themeId];
+        await api("/api/session/theme", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ theme_id: state.themeId }),
+        });
       });
-      els.themeGrid.appendChild(card);
+      els.frameList.appendChild(row);
     });
-    state.themeId = themes[0] ? themes[0].id : "classic";
-    requestAnimationFrame(() => {
-      els.themeGrid.scrollTop = els.themeGrid.scrollHeight;
-    });
+
+    if (!state.themeId || !state.framePreviews[state.themeId]) {
+      state.themeId = themes[0];
+    }
+    els.framePreviewImg.src = state.framePreviews[state.themeId];
   }
 
-  els.btnThemeBack.addEventListener("click", () => showScreen("idle"));
-
-  els.btnThemeNext.addEventListener("click", async () => {
-    await api("/api/session/theme", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme_id: state.themeId }),
-    });
-    startCaptureFlow();
+  els.btnFrameNext.addEventListener("click", async () => {
+    els.btnFrameNext.disabled = true;
+    setLoading(true, "Processing your frame…");
+    try {
+      const data = await api("/api/session/filter_preview", { method: "POST" });
+      state.filterPreviews = data.previews;
+      state.selectedFilter = "Original";
+      renderFilterList();
+      els.stripPreviewImg.src = state.filterPreviews["Original"];
+      showScreen("review");
+    } catch (err) {
+      alert(err.message);
+      els.btnFrameNext.disabled = false;
+    } finally {
+      setLoading(false);
+    }
   });
 
   // ---------------------------------------------------------------------
@@ -150,9 +163,9 @@
     const styles = getComputedStyle(rail);
     const gap = parseFloat(styles.rowGap || styles.gap) || 0;
     const slotWidth = Math.max(1, Math.floor(width / 3));
-    const slotHeight = Math.max(1, Math.floor(slotWidth / aspect));
+    const slotHeight = Math.max(1, Math.floor((height - gap * 2) / 3));
     rail.style.width = `${slotWidth}px`;
-    rail.style.height = `${slotHeight * 3 + gap * 2}px`;
+    rail.style.height = `${height}px`;
     rail.querySelectorAll(".shot-slot").forEach((slot) => {
       slot.style.width = `${slotWidth}px`;
       slot.style.height = `${slotHeight}px`;
@@ -240,14 +253,25 @@
   // Review / filters
   // ---------------------------------------------------------------------
   async function goToReview() {
-    setLoading(true, "Building your strip…");
+    setLoading(true, "Building your frame choices…");
     try {
-      const data = await api("/api/session/filter_preview", { method: "POST" });
-      state.filterPreviews = data.previews;
-      state.selectedFilter = "Original";
-      renderFilterList();
-      els.stripPreviewImg.src = data.previews["Original"];
-      showScreen("review");
+      const [themeData, frameData] = await Promise.all([
+        api("/api/themes"),
+        api("/api/session/frame_previews", { method: "POST" }),
+      ]);
+      if (!Object.keys(frameData.previews || {}).length) {
+        throw new Error("No frame options available");
+      }
+
+      state.frameNames = {};
+      themeData.forEach((theme) => {
+        state.frameNames[theme.id] = theme.name;
+      });
+
+      state.framePreviews = frameData.previews;
+      state.themeId = Object.keys(state.framePreviews)[0];
+      renderFrameList();
+      showScreen("frame");
     } catch (err) {
       alert(err.message);
       showScreen("capture");
